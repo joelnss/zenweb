@@ -150,6 +150,9 @@ export default function DashboardPage() {
   const [selectedSupportTicket, setSelectedSupportTicket] = useState<Ticket | null>(null);
   const [ticketSearch, setTicketSearch] = useState('');
   const [projectSearch, setProjectSearch] = useState('');
+  const [portalProjectSearch, setPortalProjectSearch] = useState('');
+  const [portalSupportSearch, setPortalSupportSearch] = useState('');
+  const [selectedPortalProject, setSelectedPortalProject] = useState<Ticket | null>(null);
   const [proposalInput, setProposalInput] = useState<string>('');
   const [supportProposalInput, setSupportProposalInput] = useState<string>('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -1166,6 +1169,11 @@ export default function DashboardPage() {
         );
 
       case 'projects':
+        const filteredPortalProjects = tickets.filter(t =>
+          t.name?.toLowerCase().includes(portalProjectSearch.toLowerCase()) ||
+          t.ticketNumber?.toLowerCase().includes(portalProjectSearch.toLowerCase()) ||
+          t.company?.toLowerCase().includes(portalProjectSearch.toLowerCase())
+        ).slice(0, 10);
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -1190,152 +1198,202 @@ export default function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              <div className="space-y-4">
-                {tickets.map((ticket) => (
-                  <div key={ticket.id} className={`rounded-xl border p-6 ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`}>
-                    {/* Header with ticket number, status, priority, and proposal amount */}
-                    <div className="flex items-start justify-between mb-6">
-                      <div>
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.ticketNumber}</h3>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(ticket.status)}`}>
+              <>
+                {/* Search Bar */}
+                <div className="relative">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search by name, ticket number, or company..."
+                    value={portalProjectSearch}
+                    onChange={(e) => setPortalProjectSearch(e.target.value)}
+                    className={`w-full pl-10 pr-4 py-3 rounded-xl border ${
+                      theme === 'dark'
+                        ? 'bg-white/5 border-white/10 text-white placeholder-gray-500'
+                        : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                    }`}
+                  />
+                </div>
+
+                {/* Project List - Single Column */}
+                <div className="space-y-3">
+                  {filteredPortalProjects.map((ticket) => (
+                    <button
+                      key={ticket.id}
+                      onClick={() => setSelectedPortalProject(selectedPortalProject?.id === ticket.id ? null : ticket)}
+                      className={`w-full text-left p-4 rounded-xl border transition-all ${
+                        selectedPortalProject?.id === ticket.id
+                          ? theme === 'dark' ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-cyan-50 border-cyan-300'
+                          : theme === 'dark' ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.ticketNumber}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(ticket.status)}`}>
                             {ticket.status}
                           </span>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getPriorityColor(ticket.priority)}`}>
-                            {ticket.priority}
-                          </span>
-                        </div>
-                        <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>{formatDate(ticket.createdAt)}</p>
-                      </div>
-                      {/* Proposal Amount Display */}
-                      {ticket.proposalAmount && (
-                        <div className={`text-right px-4 py-3 rounded-xl ${
-                          theme === 'dark'
-                            ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30'
-                            : 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200'
-                        }`}>
-                          <p className={`text-xs font-medium ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}>Proposal Amount</p>
-                          <p className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                            ${ticket.proposalAmount.toLocaleString()}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Contact Information */}
-                    <div className={`rounded-lg p-4 mb-4 ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'}`}>
-                      <h4 className={`text-sm font-semibold mb-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Contact Information</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-xs text-gray-500">Name</p>
-                          <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.name || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Email</p>
-                          <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.email || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Phone</p>
-                          <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.phone || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Company</p>
-                          <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.company || 'N/A'}</p>
+                          {ticket.proposalAmount && (
+                            <span className="text-sm font-medium text-green-400">${ticket.proposalAmount.toLocaleString()}</span>
+                          )}
                         </div>
                       </div>
-                    </div>
-
-                    {/* Project Details */}
-                    <div className={`rounded-lg p-4 mb-4 ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'}`}>
-                      <h4 className={`text-sm font-semibold mb-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Project Details</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-xs text-gray-500">Platform</p>
-                          <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.platform || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Service Category</p>
-                          <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.serviceCategory || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Website</p>
-                          <p className={`text-sm font-medium ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>
-                            {ticket.website ? (
-                              <a href={ticket.website.startsWith('http') ? ticket.website : `https://${ticket.website}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                                {ticket.website}
-                              </a>
-                            ) : 'N/A'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Hosting Requirements</p>
-                          <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.hostingNeeds || 'N/A'}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Budget & Timeline */}
-                    <div className={`rounded-lg p-4 mb-4 ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'}`}>
-                      <h4 className={`text-sm font-semibold mb-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Budget & Timeline</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-xs text-gray-500">Estimated Budget</p>
-                          <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.budget || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Project Timeline</p>
-                          <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.timeline || 'N/A'}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Project Description */}
-                    <div className={`rounded-lg p-4 ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'}`}>
-                      <h4 className={`text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Project Description</h4>
-                      <p className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>{ticket.description || 'No description provided'}</p>
-                    </div>
-
-                    {/* Admin Payment Amount Input for Projects */}
-                    {user?.role === 'admin' && (
-                      <div className={`rounded-lg p-4 mt-4 ${theme === 'dark' ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
-                        <h4 className={`text-sm font-semibold mb-3 ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}>Set Proposal Amount</h4>
-                        <div className="flex gap-3">
-                          <div className="relative flex-1">
-                            <span className={`absolute left-3 top-1/2 -translate-y-1/2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>$</span>
-                            <input
-                              type="number"
-                              placeholder="0.00"
-                              defaultValue={ticket.proposalAmount || ''}
-                              id={`proposal-${ticket.id}`}
-                              className={`w-full pl-7 pr-4 py-2 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                                theme === 'dark'
-                                  ? 'bg-white/5 border border-white/10 text-white placeholder-gray-500'
-                                  : 'bg-white border border-gray-300 text-gray-900 placeholder-gray-400'
-                              }`}
-                            />
-                          </div>
-                          <button
-                            onClick={() => {
-                              const input = document.getElementById(`proposal-${ticket.id}`) as HTMLInputElement;
-                              const amount = parseFloat(input?.value || '0');
-                              if (!isNaN(amount) && amount > 0) {
-                                updateProposalAmount(ticket.id, amount);
-                              }
-                            }}
-                            className={`px-6 py-2 font-medium rounded-lg transition-all ${
-                              theme === 'dark'
-                                ? 'bg-green-500/20 border border-green-500/30 text-green-400 hover:bg-green-500/30'
-                                : 'bg-green-600 text-white hover:bg-green-700'
-                            }`}
-                          >
-                            Save Amount
-                          </button>
-                        </div>
-                      </div>
+                      <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{ticket.serviceCategory || 'Project'} • {formatDate(ticket.createdAt)}</p>
+                    </button>
+                  ))}
+                  {filteredPortalProjects.length === 0 && (
+                    <p className={`text-center py-8 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>No projects found</p>
                     )}
                   </div>
-                ))}
-              </div>
+
+                {/* Project Details Panel - Below List */}
+                {selectedPortalProject && (
+                  <div className={`mt-6 rounded-xl border p-6 ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`}>
+                        {/* Header with ticket number, status, priority, and proposal amount */}
+                        <div className="flex items-start justify-between mb-6">
+                          <div>
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{selectedPortalProject.ticketNumber}</h3>
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(selectedPortalProject.status)}`}>
+                                {selectedPortalProject.status}
+                              </span>
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getPriorityColor(selectedPortalProject.priority)}`}>
+                                {selectedPortalProject.priority}
+                              </span>
+                            </div>
+                            <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>{formatDate(selectedPortalProject.createdAt)}</p>
+                          </div>
+                          {/* Proposal Amount Display (Read-only for customers) */}
+                          {selectedPortalProject.proposalAmount && (
+                            <div className={`text-right px-4 py-3 rounded-xl ${
+                              theme === 'dark'
+                                ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30'
+                                : 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200'
+                            }`}>
+                              <p className={`text-xs font-medium ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}>Proposal Amount</p>
+                              <p className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                                ${selectedPortalProject.proposalAmount.toLocaleString()}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Contact Information */}
+                        <div className={`rounded-lg p-4 mb-4 ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'}`}>
+                          <h4 className={`text-sm font-semibold mb-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Contact Information</h4>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                              <p className="text-xs text-gray-500">Name</p>
+                              <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{selectedPortalProject.name || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Email</p>
+                              <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{selectedPortalProject.email || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Phone</p>
+                              <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{selectedPortalProject.phone || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Company</p>
+                              <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{selectedPortalProject.company || 'N/A'}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Project Details */}
+                        <div className={`rounded-lg p-4 mb-4 ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'}`}>
+                          <h4 className={`text-sm font-semibold mb-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Project Details</h4>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                              <p className="text-xs text-gray-500">Platform</p>
+                              <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{selectedPortalProject.platform || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Service Category</p>
+                              <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{selectedPortalProject.serviceCategory || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Website</p>
+                              <p className={`text-sm font-medium ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>
+                                {selectedPortalProject.website ? (
+                                  <a href={selectedPortalProject.website.startsWith('http') ? selectedPortalProject.website : `https://${selectedPortalProject.website}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                                    {selectedPortalProject.website}
+                                  </a>
+                                ) : 'N/A'}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Hosting Requirements</p>
+                              <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{selectedPortalProject.hostingNeeds || 'N/A'}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Budget & Timeline */}
+                        <div className={`rounded-lg p-4 mb-4 ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'}`}>
+                          <h4 className={`text-sm font-semibold mb-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Budget & Timeline</h4>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-xs text-gray-500">Estimated Budget</p>
+                              <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{selectedPortalProject.budget || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Project Timeline</p>
+                              <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{selectedPortalProject.timeline || 'N/A'}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Project Description */}
+                        <div className={`rounded-lg p-4 ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'}`}>
+                          <h4 className={`text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Project Description</h4>
+                          <p className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>{selectedPortalProject.description || 'No description provided'}</p>
+                        </div>
+
+                        {/* Admin Payment Amount Input for Projects */}
+                        {user?.role === 'admin' && (
+                          <div className={`rounded-lg p-4 mt-4 ${theme === 'dark' ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
+                            <h4 className={`text-sm font-semibold mb-3 ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}>Set Proposal Amount</h4>
+                            <div className="flex gap-3">
+                              <div className="relative flex-1">
+                                <span className={`absolute left-3 top-1/2 -translate-y-1/2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>$</span>
+                                <input
+                                  type="number"
+                                  placeholder="0.00"
+                                  defaultValue={selectedPortalProject.proposalAmount || ''}
+                                  id={`proposal-${selectedPortalProject.id}`}
+                                  className={`w-full pl-7 pr-4 py-2 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                                    theme === 'dark'
+                                      ? 'bg-white/5 border border-white/10 text-white placeholder-gray-500'
+                                      : 'bg-white border border-gray-300 text-gray-900 placeholder-gray-400'
+                                  }`}
+                                />
+                              </div>
+                              <button
+                                onClick={() => {
+                                  const input = document.getElementById(`proposal-${selectedPortalProject.id}`) as HTMLInputElement;
+                                  const amount = parseFloat(input?.value || '0');
+                                  if (!isNaN(amount) && amount > 0) {
+                                    updateProposalAmount(selectedPortalProject.id, amount);
+                                  }
+                                }}
+                                className={`px-6 py-2 font-medium rounded-lg transition-all ${
+                                  theme === 'dark'
+                                    ? 'bg-green-500/20 border border-green-500/30 text-green-400 hover:bg-green-500/30'
+                                    : 'bg-green-600 text-white hover:bg-green-700'
+                                }`}
+                              >
+                                Save Amount
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                  </div>
+                )}
+              </>
             )}
           </div>
         );
@@ -1385,40 +1443,64 @@ export default function DashboardPage() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Ticket List */}
-                <div className="lg:col-span-1 space-y-3">
-                  {supportTickets.map((ticket) => (
+              <>
+                {/* Search Bar */}
+                <div className="relative">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search by ticket number or issue type..."
+                    value={portalSupportSearch}
+                    onChange={(e) => setPortalSupportSearch(e.target.value)}
+                    className={`w-full pl-10 pr-4 py-3 rounded-xl border ${
+                      theme === 'dark'
+                        ? 'bg-white/5 border-white/10 text-white placeholder-gray-500'
+                        : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                    }`}
+                  />
+                </div>
+
+                {/* Ticket List - Single Column */}
+                <div className="space-y-3">
+                  {supportTickets
+                    .filter(t =>
+                      t.ticketNumber?.toLowerCase().includes(portalSupportSearch.toLowerCase()) ||
+                      t.issueType?.toLowerCase().includes(portalSupportSearch.toLowerCase()) ||
+                      t.name?.toLowerCase().includes(portalSupportSearch.toLowerCase())
+                    )
+                    .filter(t => t.status !== 'archived')
+                    .slice(0, 10)
+                    .map((ticket) => (
                     <button
                       key={ticket.id}
-                      onClick={() => selectSupportTicket(ticket)}
+                      onClick={() => selectSupportTicket(selectedSupportTicket?.id === ticket.id ? null : ticket)}
                       className={`w-full text-left p-4 rounded-xl border transition-all ${
                         selectedSupportTicket?.id === ticket.id
-                          ? 'bg-cyan-500/10 border-cyan-500/30'
-                          : 'bg-white/5 border-white/10 hover:bg-white/10'
+                          ? theme === 'dark' ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-cyan-50 border-cyan-300'
+                          : theme === 'dark' ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white border-gray-200 hover:bg-gray-50'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-white">{ticket.ticketNumber || ticket.id}</span>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(ticket.status)}`}>
-                          {ticket.status}
-                        </span>
+                        <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.ticketNumber || ticket.id}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(ticket.status)}`}>
+                            {ticket.status}
+                          </span>
+                          {ticket.proposalAmount && (
+                            <span className="text-sm font-medium text-green-400">${ticket.proposalAmount.toLocaleString()}</span>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-400 truncate">{ticket.issueType || 'Support Request'}</p>
-                      <div className="flex items-center justify-between mt-1">
-                        <p className="text-xs text-gray-500">{formatDate(ticket.createdAt)}</p>
-                        {ticket.proposalAmount && (
-                          <span className="text-xs font-medium text-green-400">${ticket.proposalAmount.toLocaleString()}</span>
-                        )}
-                      </div>
+                      <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{ticket.issueType || 'Support Request'} • {formatDate(ticket.createdAt)}</p>
                     </button>
                   ))}
                 </div>
 
-                {/* Ticket Detail & Conversation */}
-                <div className="lg:col-span-2">
-                  {selectedSupportTicket ? (
-                    <div className="bg-white/5 rounded-xl border border-white/10 overflow-hidden h-full flex flex-col">
+                {/* Ticket Detail & Conversation - Below List */}
+                {selectedSupportTicket && (
+                <div className={`mt-6 rounded-xl border overflow-hidden ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`}>
                       {/* Ticket Header */}
                       <div className="p-4 border-b border-white/10">
                         <div className="flex items-center justify-between">
@@ -1663,19 +1745,9 @@ export default function DashboardPage() {
                           </button>
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="bg-white/5 rounded-xl border border-white/10 flex items-center justify-center min-h-[400px]">
-                      <div className="text-center">
-                        <svg className="w-12 h-12 text-gray-600 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                        </svg>
-                        <p className="text-gray-400">Select a ticket to view conversation</p>
-                      </div>
-                    </div>
-                  )}
                 </div>
-              </div>
+                )}
+              </>
             )}
           </div>
         );
