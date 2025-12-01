@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="z-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4fe7f3"/>
+      <stop offset="50%" stop-color="#8c5eff"/>
+      <stop offset="100%" stop-color="#c938e7"/>
+    </linearGradient>
+    <linearGradient id="z-grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4fe7f3" stop-opacity="0.7"/>
+      <stop offset="50%" stop-color="#8c5eff" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#c938e7" stop-opacity="0.7"/>
+    </linearGradient>
+    <linearGradient id="z-grad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4fe7f3" stop-opacity="0.4"/>
+      <stop offset="50%" stop-color="#8c5eff" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#c938e7" stop-opacity="0.4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg-grad)"/>
+
+  <!-- Decorative circles -->
+  <circle cx="150" cy="150" r="200" fill="#4fe7f3" opacity="0.05"/>
+  <circle cx="1050" cy="500" r="250" fill="#c938e7" opacity="0.05"/>
+
+  <!-- Stacked Z letters on left side -->
+  <g transform="translate(80, 120)">
+    <!-- Z1 - Top, full opacity -->
+    <path d="M0 0h200v30H60l140 90v30H0v-30h140L0 30V0z" fill="url(#z-grad)" transform="translate(0, 0) scale(0.8)"/>
+    <!-- Z2 - Middle, slightly faded -->
+    <path d="M0 0h200v30H60l140 90v30H0v-30h140L0 30V0z" fill="url(#z-grad2)" transform="translate(20, 130) scale(0.8)"/>
+    <!-- Z3 - Bottom, more faded -->
+    <path d="M0 0h200v30H60l140 90v30H0v-30h140L0 30V0z" fill="url(#z-grad3)" transform="translate(40, 260) scale(0.8)"/>
+  </g>
+
+  <!-- Brand text -->
+  <text x="380" y="280" font-family="system-ui, -apple-system, sans-serif" font-size="120" font-weight="700" fill="white">Zenweb</text>
+
+  <!-- Tagline -->
+  <text x="380" y="360" font-family="system-ui, -apple-system, sans-serif" font-size="36" font-weight="400" fill="#9ca3af">High Performance eCommerce Solutions</text>
+
+  <!-- Subtext -->
+  <text x="380" y="420" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="400" fill="#6b7280">Fast • Lean • Scalable</text>
+
+  <!-- Location badge -->
+  <g transform="translate(380, 460)">
+    <rect width="200" height="36" rx="18" fill="rgba(59, 130, 246, 0.2)" stroke="rgba(59, 130, 246, 0.4)" stroke-width="1"/>
+    <text x="100" y="24" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" fill="#60a5fa">📍 Michigan, USA</text>
+  </g>
+
+  <!-- Website -->
+  <text x="1120" y="590" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="400" fill="#4b5563">zenweb.studio</text>
+</svg>
