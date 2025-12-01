@@ -145,6 +145,14 @@ try {
   // Column already exists, ignore error
 }
 
+// Add relatedProjectId column for linking enhancements/issues to existing projects
+try {
+  db.exec(`ALTER TABLE tickets ADD COLUMN relatedProjectId TEXT`);
+  console.log('Added relatedProjectId column to tickets table');
+} catch (e) {
+  // Column already exists, ignore error
+}
+
 // Create analytics table for page views
 db.exec(`
   CREATE TABLE IF NOT EXISTS page_views (
@@ -261,7 +269,8 @@ app.post('/api/tickets', (req, res) => {
       userId, projectId, requestType, category, issueType, affectedArea,
       errorMessage, stepsToReproduce, expectedBehavior, actualBehavior,
       browser, screenshot, projectType, priority, subject, description,
-      additionalInfo, website, contactName, contactEmail, contactPhone, contactCompany
+      additionalInfo, website, contactName, contactEmail, contactPhone, contactCompany,
+      relatedProjectId
     } = req.body;
 
     const id = 'tkt_' + uuidv4().replace(/-/g, '').slice(0, 16);
@@ -272,6 +281,7 @@ app.post('/api/tickets', (req, res) => {
     let finalCategory = category;
     if (!finalCategory) {
       if (requestType === 'new_project') finalCategory = 'project';
+      else if (requestType === 'enhancement') finalCategory = 'enhancement';
       else if (issueType === 'bug') finalCategory = 'bug';
       else if (issueType === 'feature') finalCategory = 'feature';
       else finalCategory = 'support';
@@ -283,6 +293,8 @@ app.post('/api/tickets', (req, res) => {
       if (requestType === 'new_project') {
         const typeLabel = projectType?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'New Project';
         finalSubject = `New Project Request: ${typeLabel}`;
+      } else if (requestType === 'enhancement') {
+        finalSubject = `Enhancement Request: ${issueType?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Feature Enhancement'}`;
       } else {
         finalSubject = issueType?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Support Request';
       }
@@ -294,8 +306,8 @@ app.post('/api/tickets', (req, res) => {
         affectedArea, errorMessage, stepsToReproduce, expectedBehavior, actualBehavior,
         browser, screenshot, projectType, priority, status, subject, description,
         additionalInfo, website, contactName, contactEmail, contactPhone, contactCompany,
-        createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        relatedProjectId, createdAt, updatedAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -305,7 +317,7 @@ app.post('/api/tickets', (req, res) => {
       browser || null, screenshot || null, projectType || null, priority || 'normal',
       finalSubject, description || null, additionalInfo || null, website || null,
       contactName || null, contactEmail || null, contactPhone || null, contactCompany || null,
-      now, now
+      relatedProjectId || null, now, now
     );
 
     const ticket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(id);
@@ -313,7 +325,8 @@ app.post('/api/tickets', (req, res) => {
     console.log(`Ticket created: ${ticketNumber}`);
 
     // Send SMS notification
-    const smsMessage = `New Ticket: ${ticketNumber}\nType: ${requestType === 'new_project' ? 'Project Request' : 'Technical Issue'}\nFrom: ${contactName || 'Unknown'}\nSubject: ${finalSubject}\nPriority: ${priority || 'normal'}`;
+    const typeLabel = requestType === 'new_project' ? 'Project Request' : requestType === 'enhancement' ? 'Enhancement Request' : 'Technical Issue';
+    const smsMessage = `New Ticket: ${ticketNumber}\nType: ${typeLabel}\nFrom: ${contactName || 'Unknown'}\nSubject: ${finalSubject}\nPriority: ${priority || 'normal'}`;
     sendSmsNotification(smsMessage);
 
     res.status(201).json({ success: true, ticket, message: 'Ticket created successfully' });

@@ -6,7 +6,7 @@ import { useTheme } from '@/lib/theme/theme-context';
 import { motion } from 'framer-motion';
 import { registerUser } from '@/lib/data/users';
 import { createProject, PROJECT_TYPES, ProjectType } from '@/lib/data/projects';
-import { createTicket } from '@/lib/api/tickets';
+import { createTicket, getAllTickets } from '@/lib/api/tickets';
 
 const issueTypes = [
   { value: 'bug', label: 'Bug / Error' },
@@ -52,7 +52,7 @@ interface SupportTicketFormData {
   phone: string;
   company: string;
   website: string;
-  requestType: 'new_project' | 'technical_issue' | '';
+  requestType: 'new_project' | 'technical_issue' | 'enhancement' | '';
   projectType: string;
   issueType: string;
   affectedArea: string;
@@ -64,6 +64,17 @@ interface SupportTicketFormData {
   actualBehavior: string;
   screenshot: string;
   additionalInfo: string;
+  relatedProjectId: string;
+}
+
+interface UserProject {
+  id: string;
+  ticketNumber: string;
+  contactCompany?: string;
+  contactName?: string;
+  projectType?: string;
+  status: string;
+  createdAt: string;
 }
 
 interface SupportTicketFormProps {
@@ -76,7 +87,7 @@ export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [ticketNumber, setTicketNumber] = useState('');
-  const [submittedRequestType, setSubmittedRequestType] = useState<'new_project' | 'technical_issue' | ''>('');
+  const [submittedRequestType, setSubmittedRequestType] = useState<'new_project' | 'technical_issue' | 'enhancement' | ''>('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [createAccount, setCreateAccount] = useState(true);
@@ -88,6 +99,9 @@ export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps 
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // State for user's existing projects
+  const [userProjects, setUserProjects] = useState<UserProject[]>([]);
 
   const [formData, setFormData] = useState<SupportTicketFormData>({
     name: user?.name || '',
@@ -107,6 +121,7 @@ export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps 
     actualBehavior: '',
     screenshot: '',
     additionalInfo: '',
+    relatedProjectId: '',
   });
 
   useEffect(() => {
@@ -122,6 +137,32 @@ export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps 
       setCustomerType('returning');
     }
   }, [user]);
+
+  // Fetch user's projects when authenticated
+  useEffect(() => {
+    const fetchUserProjects = async () => {
+      if (isAuthenticated && user?.id) {
+        try {
+          const tickets = await getAllTickets();
+          console.log('Fetched tickets for project dropdown:', tickets);
+          console.log('User ID:', user.id);
+          if (Array.isArray(tickets)) {
+            // Filter to only show this user's projects (new_project type tickets)
+            const projects = tickets.filter(
+              (ticket: UserProject & { userId?: string; requestType?: string }) =>
+                ticket.userId === user.id && ticket.requestType === 'new_project'
+            );
+            console.log('Filtered user projects:', projects);
+            setUserProjects(projects);
+          }
+        } catch (error) {
+          console.error('Error fetching user projects:', error);
+        }
+      }
+    };
+
+    fetchUserProjects();
+  }, [isAuthenticated, user?.id]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,6 +215,7 @@ export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps 
       actualBehavior: 'The page shows an error or does not respond',
       screenshot: '',
       additionalInfo: `Test ticket #${randomId} - Random test data for QA purposes`,
+      relatedProjectId: '',
     });
 
     // Set customer type to new if not authenticated
@@ -250,7 +292,7 @@ export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps 
       const ticketData = {
         userId: user?.id || null,
         projectId,
-        requestType: formData.requestType as 'new_project' | 'technical_issue',
+        requestType: formData.requestType as 'new_project' | 'technical_issue' | 'enhancement',
 
         // Technical issue fields
         issueType: formData.issueType,
@@ -261,6 +303,9 @@ export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps 
         actualBehavior: formData.actualBehavior,
         browser: formData.browser,
         screenshot: formData.screenshot,
+
+        // Related project for technical issues
+        relatedProjectId: formData.relatedProjectId || null,
 
         // Project request fields
         projectType: formData.projectType,
@@ -294,7 +339,7 @@ export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps 
       }
 
       setTicketNumber(ticketResult.ticket?.ticketNumber || '');
-      setSubmittedRequestType(formData.requestType as 'new_project' | 'technical_issue');
+      setSubmittedRequestType(formData.requestType as 'new_project' | 'technical_issue' | 'enhancement');
       setSuccess(true);
 
       console.log('Ticket created successfully:', ticketResult.ticket?.ticketNumber);
@@ -322,6 +367,7 @@ export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps 
         actualBehavior: '',
         screenshot: '',
         additionalInfo: '',
+        relatedProjectId: '',
       });
       setPassword('');
       setConfirmPassword('');
@@ -357,10 +403,14 @@ export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps 
               </svg>
             </div>
             <h3 className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              {submittedRequestType === 'new_project' ? 'Project Request Submitted!' : 'Support Ticket Created!'}
+              {submittedRequestType === 'new_project' ? 'Project Request Submitted!' :
+               submittedRequestType === 'enhancement' ? 'Enhancement Request Submitted!' :
+               'Support Ticket Created!'}
             </h3>
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-              {submittedRequestType === 'new_project' ? 'Your project reference number is:' : 'Your ticket number is:'}
+              {submittedRequestType === 'new_project' ? 'Your project reference number is:' :
+               submittedRequestType === 'enhancement' ? 'Your enhancement request number is:' :
+               'Your ticket number is:'}
             </p>
             <div className={`text-3xl font-bold mb-6 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
               {ticketNumber}
@@ -368,6 +418,8 @@ export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps 
             <p className={`mb-8 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
               {submittedRequestType === 'new_project'
                 ? 'Our team will review your project request and get back to you within 24-48 hours with next steps.'
+                : submittedRequestType === 'enhancement'
+                ? 'Our team will review your enhancement request and provide a quote within 24-48 hours.'
                 : 'Our team will review your issue and respond within 4-24 hours depending on severity.'}
             </p>
 
@@ -383,7 +435,9 @@ export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps 
                   : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
               }`}
             >
-              {submittedRequestType === 'new_project' ? 'Submit Another Request' : 'Submit Another Ticket'}
+              {submittedRequestType === 'new_project' ? 'Submit Another Request' :
+               submittedRequestType === 'enhancement' ? 'Submit Another Enhancement' :
+               'Submit Another Ticket'}
             </button>
           </div>
         </motion.div>
@@ -790,11 +844,9 @@ export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps 
           </h3>
 
           {/* Request Type Buttons */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             {/* Technical Issue - First */}
-            <button
-              type="button"
-              onClick={() => setFormData(prev => ({ ...prev, requestType: 'technical_issue', projectType: '' }))}
+            <div
               className={`p-4 rounded-xl border-2 transition-all text-left ${
                 formData.requestType === 'technical_issue'
                   ? theme === 'dark'
@@ -805,27 +857,135 @@ export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps 
                     : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50'
               }`}
             >
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${
-                formData.requestType === 'technical_issue'
-                  ? 'bg-orange-500/20'
-                  : theme === 'dark' ? 'bg-white/10' : 'bg-gray-100'
-              }`}>
-                <svg className={`w-5 h-5 ${formData.requestType === 'technical_issue' ? 'text-orange-500' : theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h4 className={`font-semibold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                Technical Issue
-              </h4>
-              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                Report a bug or request support
-              </p>
-            </button>
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, requestType: 'technical_issue', projectType: '' }))}
+                className="w-full text-left"
+              >
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${
+                  formData.requestType === 'technical_issue'
+                    ? 'bg-orange-500/20'
+                    : theme === 'dark' ? 'bg-white/10' : 'bg-gray-100'
+                }`}>
+                  <svg className={`w-5 h-5 ${formData.requestType === 'technical_issue' ? 'text-orange-500' : theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h4 className={`font-semibold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                  Technical Issue
+                </h4>
+                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Report a bug or request support
+                </p>
+              </button>
 
-            {/* New Project - Second */}
+              {/* Related Project Dropdown - Inside Technical Issue box */}
+              {formData.requestType === 'technical_issue' && isAuthenticated && userProjects.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-orange-500/30">
+                  <label htmlFor="relatedProjectId" className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Related Project (optional)
+                  </label>
+                  <select
+                    id="relatedProjectId"
+                    name="relatedProjectId"
+                    value={formData.relatedProjectId}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition-colors ${
+                      theme === 'dark'
+                        ? 'bg-white/10 border border-white/20 text-white'
+                        : 'bg-white border border-gray-300 text-gray-900'
+                    }`}
+                  >
+                    <option value="" className={theme === 'dark' ? 'bg-gray-900' : 'bg-white'}>
+                      Select a project...
+                    </option>
+                    {userProjects.map((project) => (
+                      <option
+                        key={project.id}
+                        value={project.id}
+                        className={theme === 'dark' ? 'bg-gray-900' : 'bg-white'}
+                      >
+                        {project.ticketNumber} - {project.contactCompany || project.contactName || 'Project'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Enhancement Request - Second */}
+            <div
+              className={`p-4 rounded-xl border-2 transition-all text-left ${
+                formData.requestType === 'enhancement'
+                  ? theme === 'dark'
+                    ? 'border-purple-500 bg-purple-500/10'
+                    : 'border-purple-500 bg-purple-50'
+                  : theme === 'dark'
+                    ? 'border-white/20 hover:border-white/40 hover:bg-white/5'
+                    : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50'
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, requestType: 'enhancement', projectType: '', issueType: '', affectedArea: '' }))}
+                className="w-full text-left"
+              >
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${
+                  formData.requestType === 'enhancement'
+                    ? 'bg-purple-500/20'
+                    : theme === 'dark' ? 'bg-white/10' : 'bg-gray-100'
+                }`}>
+                  <svg className={`w-5 h-5 ${formData.requestType === 'enhancement' ? 'text-purple-500' : theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <h4 className={`font-semibold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                  Enhancement
+                </h4>
+                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Add features to existing project
+                </p>
+              </button>
+
+              {/* Related Project Dropdown - Inside Enhancement box (required) */}
+              {formData.requestType === 'enhancement' && isAuthenticated && userProjects.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-purple-500/30">
+                  <label htmlFor="relatedProjectId" className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Related Project *
+                  </label>
+                  <select
+                    id="relatedProjectId"
+                    name="relatedProjectId"
+                    value={formData.relatedProjectId}
+                    onChange={handleChange}
+                    required
+                    className={`w-full px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-colors ${
+                      theme === 'dark'
+                        ? 'bg-white/10 border border-white/20 text-white'
+                        : 'bg-white border border-gray-300 text-gray-900'
+                    }`}
+                  >
+                    <option value="" className={theme === 'dark' ? 'bg-gray-900' : 'bg-white'}>
+                      Select a project...
+                    </option>
+                    {userProjects.map((project) => (
+                      <option
+                        key={project.id}
+                        value={project.id}
+                        className={theme === 'dark' ? 'bg-gray-900' : 'bg-white'}
+                      >
+                        {project.ticketNumber} - {project.contactCompany || project.contactName || 'Project'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* New Project - Third */}
             <button
               type="button"
-              onClick={() => setFormData(prev => ({ ...prev, requestType: 'new_project', issueType: '', affectedArea: '' }))}
+              onClick={() => setFormData(prev => ({ ...prev, requestType: 'new_project', issueType: '', affectedArea: '', relatedProjectId: '' }))}
               className={`p-4 rounded-xl border-2 transition-all text-left ${
                 formData.requestType === 'new_project'
                   ? theme === 'dark'
@@ -1173,6 +1333,96 @@ export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps 
           </div>
         )}
 
+        {/* Enhancement Details - Only for Enhancement Requests */}
+        {formData.requestType === 'enhancement' && (
+          <div className={`border-b pb-6 ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
+            <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${theme === 'dark' ? 'bg-white/10 text-white' : 'bg-gray-900 text-white'}`}>{isAuthenticated ? '2' : '3'}</span>
+              Enhancement Details
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="stepsToReproduce" className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Enhancement Description *
+                </label>
+                <textarea
+                  id="stepsToReproduce"
+                  name="stepsToReproduce"
+                  value={formData.stepsToReproduce}
+                  onChange={handleChange}
+                  required
+                  rows={4}
+                  className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-white/5 border border-white/20 text-white placeholder-gray-500'
+                      : 'bg-white border-2 border-gray-300 text-gray-900 placeholder-gray-400'
+                  }`}
+                  placeholder="Describe the new feature or enhancement you'd like to add to your existing project..."
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="expectedBehavior" className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Expected Outcome
+                  </label>
+                  <textarea
+                    id="expectedBehavior"
+                    name="expectedBehavior"
+                    value={formData.expectedBehavior}
+                    onChange={handleChange}
+                    rows={2}
+                    className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-colors ${
+                      theme === 'dark'
+                        ? 'bg-white/5 border border-white/20 text-white placeholder-gray-500'
+                        : 'bg-white border-2 border-gray-300 text-gray-900 placeholder-gray-400'
+                    }`}
+                    placeholder="What should this enhancement accomplish?"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="actualBehavior" className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Timeline / Priority
+                  </label>
+                  <textarea
+                    id="actualBehavior"
+                    name="actualBehavior"
+                    value={formData.actualBehavior}
+                    onChange={handleChange}
+                    rows={2}
+                    className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-colors ${
+                      theme === 'dark'
+                        ? 'bg-white/5 border border-white/20 text-white placeholder-gray-500'
+                        : 'bg-white border-2 border-gray-300 text-gray-900 placeholder-gray-400'
+                    }`}
+                    placeholder="When do you need this? How urgent is it?"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="additionalInfo" className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Additional Information
+                </label>
+                <textarea
+                  id="additionalInfo"
+                  name="additionalInfo"
+                  value={formData.additionalInfo}
+                  onChange={handleChange}
+                  rows={3}
+                  className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-white/5 border border-white/20 text-white placeholder-gray-500'
+                      : 'bg-white border-2 border-gray-300 text-gray-900 placeholder-gray-400'
+                  }`}
+                  placeholder="Any reference examples, mockups, or additional context..."
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Project Details - Only for New Projects */}
         {formData.requestType === 'new_project' && (
           <div className={`border-b pb-6 ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
@@ -1266,19 +1516,24 @@ export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps 
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={isSubmitting || !formData.requestType}
+          disabled={isSubmitting || !formData.requestType || (formData.requestType === 'enhancement' && !formData.relatedProjectId)}
           className={`w-full px-6 py-4 font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
             theme === 'dark'
               ? 'bg-white text-gray-900 hover:bg-gray-100'
               : 'bg-gray-900 text-white hover:bg-gray-800'
           }`}
         >
-          {isSubmitting ? 'Submitting...' : formData.requestType === 'new_project' ? 'Submit Project Request' : 'Submit Support Ticket'}
+          {isSubmitting ? 'Submitting...' :
+            formData.requestType === 'new_project' ? 'Submit Project Request' :
+            formData.requestType === 'enhancement' ? 'Submit Enhancement Request' :
+            'Submit Support Ticket'}
         </button>
 
         <p className="text-sm text-gray-500 text-center">
           {formData.requestType === 'new_project'
             ? 'We\'ll review your project request and get back to you within 24-48 hours.'
+            : formData.requestType === 'enhancement'
+            ? 'We\'ll review your enhancement request and provide a quote within 24-48 hours.'
             : 'Critical issues are prioritized. Response time: 4-24 hours.'}
         </p>
       </form>

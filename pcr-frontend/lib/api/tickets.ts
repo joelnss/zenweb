@@ -12,8 +12,9 @@ export interface Ticket {
   ticketNumber: string;
   userId: string | null;
   projectId: string | null;
-  requestType: 'new_project' | 'technical_issue';
+  requestType: 'new_project' | 'technical_issue' | 'enhancement';
   category: string;
+  relatedProjectId?: string | null;
   issueType?: string;
   affectedArea?: string;
   errorMessage?: string;
@@ -47,8 +48,9 @@ export interface Ticket {
 export interface CreateTicketInput {
   userId?: string | null;
   projectId?: string | null;
-  requestType: 'new_project' | 'technical_issue';
+  requestType: 'new_project' | 'technical_issue' | 'enhancement';
   issueType?: string;
+  relatedProjectId?: string | null;
   affectedArea?: string;
   errorMessage?: string;
   stepsToReproduce?: string;

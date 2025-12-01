@@ -328,7 +328,7 @@ export default function DashboardPage() {
 
     try {
       const allTickets = await getAllTicketsAPI();
-      const supportCount = allTickets.filter((t: ZenwebTicket) => t.requestType === 'technical_issue').length;
+      const supportCount = allTickets.filter((t: ZenwebTicket) => t.requestType === 'technical_issue' || t.requestType === 'enhancement').length;
       const projectCount = allTickets.filter((t: ZenwebTicket) => t.requestType === 'new_project').length;
 
       console.log('=== API DEBUG ===');
@@ -448,7 +448,7 @@ export default function DashboardPage() {
 
     // Separate project requests and support tickets based on requestType
     const projectRequests = allZenwebTickets.filter(t => t.requestType === 'new_project');
-    const supportRequests = allZenwebTickets.filter(t => t.requestType === 'technical_issue');
+    const supportRequests = allZenwebTickets.filter(t => t.requestType === 'technical_issue' || t.requestType === 'enhancement');
 
     console.log('Project requests:', projectRequests.length);
     console.log('Support requests:', supportRequests.length);
@@ -482,6 +482,7 @@ export default function DashboardPage() {
         proposalAmount: t.proposalAmount,
         paymentStatus: t.paymentStatus as 'unpaid' | 'paid' | 'pending',
         paidAt: t.paidAt,
+        relatedProjectId: t.relatedProjectId || undefined,
       };
     };
 
@@ -997,7 +998,14 @@ export default function DashboardPage() {
                         {supportTickets.slice(0, 5).map((ticket) => (
                           <div key={ticket.id} className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'}`}>
                             <div className="flex items-center justify-between mb-2">
-                              <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.ticketNumber || ticket.id}</span>
+                              <div className="flex items-center gap-2">
+                                <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.ticketNumber || ticket.id}</span>
+                                {ticket.type === 'enhancement' && (
+                                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                                    Enhancement
+                                  </span>
+                                )}
+                              </div>
                               <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(ticket.status)}`}>
                                 {ticket.status}
                               </span>
@@ -1151,7 +1159,14 @@ export default function DashboardPage() {
                       {supportTickets.slice(0, 3).map((ticket) => (
                         <div key={ticket.id} className="p-4 bg-white/5 rounded-lg">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-white">{ticket.ticketNumber || ticket.id}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-white">{ticket.ticketNumber || ticket.id}</span>
+                              {ticket.type === 'enhancement' && (
+                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                                  Enhancement
+                                </span>
+                              )}
+                            </div>
                             <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(ticket.status)}`}>
                               {ticket.status}
                             </span>
@@ -1483,7 +1498,14 @@ export default function DashboardPage() {
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.ticketNumber || ticket.id}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.ticketNumber || ticket.id}</span>
+                          {ticket.type === 'enhancement' && (
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                              Enhancement
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2">
                           <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(ticket.status)}`}>
                             {ticket.status}
@@ -1513,6 +1535,11 @@ export default function DashboardPage() {
                               <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(selectedSupportTicket.priority)}`}>
                                 {selectedSupportTicket.priority}
                               </span>
+                              {selectedSupportTicket.type === 'enhancement' && (
+                                <span className="px-2 py-1 rounded text-xs font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                                  Enhancement
+                                </span>
+                              )}
                             </div>
                             <p className="text-sm text-gray-400 mt-1">{selectedSupportTicket.issueType || 'Support Request'}</p>
                           </div>
@@ -2779,7 +2806,14 @@ export default function DashboardPage() {
                           }`}
                         >
                           <div className="flex items-center justify-between mb-2">
-                            <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.ticketNumber || ticket.id}</span>
+                            <div className="flex items-center gap-2">
+                              <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.ticketNumber || ticket.id}</span>
+                              {ticket.type === 'enhancement' && (
+                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                                  Enhancement
+                                </span>
+                              )}
+                            </div>
                             <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(ticket.status)}`}>
                               {ticket.status}
                             </span>
@@ -2796,7 +2830,14 @@ export default function DashboardPage() {
                 {selectedTicket ? (
                   <div className={`rounded-xl border overflow-hidden ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`}>
                     <div className={`p-4 border-b flex items-center justify-between ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
-                      <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{selectedTicket.ticketNumber || selectedTicket.id}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{selectedTicket.ticketNumber || selectedTicket.id}</h3>
+                        {selectedTicket.type === 'enhancement' && (
+                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                            Enhancement
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2">
                         {/* Refresh Button */}
                         <button
@@ -3171,7 +3212,14 @@ export default function DashboardPage() {
                       className={`p-4 ${theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-gray-50'}`}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.ticketNumber || ticket.id}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.ticketNumber || ticket.id}</span>
+                          {ticket.type === 'enhancement' && (
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                              Enhancement
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2">
                           <span className={`px-2 py-1 rounded text-xs font-medium bg-gray-500/20 text-gray-400`}>
                             archived
