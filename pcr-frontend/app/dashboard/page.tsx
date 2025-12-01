@@ -58,7 +58,7 @@ interface Message {
   createdAt: string;
 }
 
-type NavSection = 'overview' | 'projects' | 'support' | 'invoices' | 'company' | 'team' | 'settings' | 'all-requests' | 'all-support' | 'users' | 'analytics';
+type NavSection = 'overview' | 'projects' | 'support' | 'invoices' | 'company' | 'team' | 'settings' | 'all-requests' | 'all-support' | 'archived' | 'users' | 'analytics';
 
 interface RegisteredUser {
   id: string;
@@ -148,6 +148,8 @@ export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [selectedSupportTicket, setSelectedSupportTicket] = useState<Ticket | null>(null);
+  const [ticketSearch, setTicketSearch] = useState('');
+  const [projectSearch, setProjectSearch] = useState('');
   const [proposalInput, setProposalInput] = useState<string>('');
   const [supportProposalInput, setSupportProposalInput] = useState<string>('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -727,6 +729,11 @@ export default function DashboardPage() {
     { id: 'all-support', label: 'All Support Tickets', icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+      </svg>
+    )},
+    { id: 'archived', label: 'Archived Tickets', icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
       </svg>
     )},
     { id: 'users', label: 'Users & Accounts', icon: (
@@ -2320,13 +2327,37 @@ export default function DashboardPage() {
         );
 
       case 'all-requests':
+        const filteredProjects = tickets.filter(t => {
+          if (!projectSearch) return true;
+          const search = projectSearch.toLowerCase();
+          const name = (t.name || '').toLowerCase();
+          const company = (t.company || '').toLowerCase();
+          const ticketNum = (t.ticketNumber || t.id || '').toLowerCase();
+          return name.includes(search) || company.includes(search) || ticketNum.includes(search);
+        }).slice(0, 10);
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>All Project Requests</h2>
-              <div className="flex items-center gap-4">
-                <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{tickets.length} total requests</span>
-              </div>
+              <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{tickets.length} total requests</span>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative">
+              <svg className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search by customer name or ticket number..."
+                value={projectSearch}
+                onChange={(e) => setProjectSearch(e.target.value)}
+                className={`w-full pl-10 pr-4 py-3 rounded-xl border ${
+                  theme === 'dark'
+                    ? 'bg-white/5 border-white/10 text-white placeholder-gray-500'
+                    : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                }`}
+              />
             </div>
 
             {tickets.length === 0 ? (
@@ -2338,37 +2369,44 @@ export default function DashboardPage() {
                 <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>Customer project requests will appear here</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Ticket List */}
+              <div className="space-y-6">
+                {/* Project List - Single Column */}
                 <div className={`rounded-xl border overflow-hidden ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`}>
-                  <div className={`p-4 border-b ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
+                  <div className={`p-4 border-b flex items-center justify-between ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
                     <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Project Requests</h3>
+                    <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Showing {filteredProjects.length} of {tickets.length}</span>
                   </div>
-                  <div className={`divide-y max-h-[600px] overflow-y-auto ${theme === 'dark' ? 'divide-white/10' : 'divide-gray-200'}`}>
-                    {tickets.map((ticket) => (
-                      <button
-                        key={ticket.id}
-                        onClick={() => setSelectedTicket(ticket)}
-                        className={`w-full p-4 text-left transition-all ${
-                          selectedTicket?.id === ticket.id
-                            ? 'bg-blue-500/10 border-l-4 border-blue-500'
-                            : theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-gray-50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.ticketNumber}</span>
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(ticket.status)}`}>
-                            {ticket.status}
-                          </span>
-                        </div>
-                        <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{ticket.company || ticket.name}</p>
-                        <p className="text-xs text-gray-500 mt-1">{formatDate(ticket.createdAt)}</p>
-                      </button>
-                    ))}
+                  <div className={`divide-y ${theme === 'dark' ? 'divide-white/10' : 'divide-gray-200'}`}>
+                    {filteredProjects.length === 0 ? (
+                      <div className="p-8 text-center">
+                        <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>No projects match your search</p>
+                      </div>
+                    ) : (
+                      filteredProjects.map((ticket) => (
+                        <button
+                          key={ticket.id}
+                          onClick={() => setSelectedTicket(ticket)}
+                          className={`w-full p-4 text-left transition-all ${
+                            selectedTicket?.id === ticket.id
+                              ? 'bg-blue-500/10 border-l-4 border-blue-500'
+                              : theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.ticketNumber}</span>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(ticket.status)}`}>
+                              {ticket.status}
+                            </span>
+                          </div>
+                          <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{ticket.company || ticket.name}</p>
+                          <p className="text-xs text-gray-500 mt-1">{formatDate(ticket.createdAt)}</p>
+                        </button>
+                      ))
+                    )}
                   </div>
                 </div>
 
-                {/* Ticket Detail */}
+                {/* Project Detail - Below List */}
                 {selectedTicket ? (
                   <div className={`rounded-xl border overflow-hidden ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`}>
                     <div className={`p-4 border-b flex items-center justify-between ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
@@ -2602,16 +2640,41 @@ export default function DashboardPage() {
         );
 
       case 'all-support':
+        const activeTickets = supportTickets.filter(t => t.status !== 'archived');
+        const filteredTickets = activeTickets.filter(t => {
+          if (!ticketSearch) return true;
+          const search = ticketSearch.toLowerCase();
+          const name = (t.name || '').toLowerCase();
+          const company = (t.company || '').toLowerCase();
+          const ticketNum = (t.ticketNumber || t.id || '').toLowerCase();
+          return name.includes(search) || company.includes(search) || ticketNum.includes(search);
+        }).slice(0, 10);
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>All Support Tickets</h2>
-              <div className="flex items-center gap-4">
-                <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{supportTickets.length} total tickets</span>
-              </div>
+              <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{activeTickets.length} active tickets</span>
             </div>
 
-            {supportTickets.length === 0 ? (
+            {/* Search Input */}
+            <div className="relative">
+              <svg className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search by customer name or ticket number..."
+                value={ticketSearch}
+                onChange={(e) => setTicketSearch(e.target.value)}
+                className={`w-full pl-10 pr-4 py-3 rounded-xl border ${
+                  theme === 'dark'
+                    ? 'bg-white/5 border-white/10 text-white placeholder-gray-500'
+                    : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                }`}
+              />
+            </div>
+
+            {activeTickets.length === 0 ? (
               <div className={`text-center py-16 rounded-xl border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`}>
                 <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -2620,37 +2683,44 @@ export default function DashboardPage() {
                 <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>Customer support tickets will appear here</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Ticket List */}
+              <div className="space-y-6">
+                {/* Ticket List - Single Column */}
                 <div className={`rounded-xl border overflow-hidden ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`}>
-                  <div className={`p-4 border-b ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
+                  <div className={`p-4 border-b flex items-center justify-between ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
                     <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Support Tickets</h3>
+                    <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Showing {filteredTickets.length} of {activeTickets.length}</span>
                   </div>
-                  <div className={`divide-y max-h-[600px] overflow-y-auto ${theme === 'dark' ? 'divide-white/10' : 'divide-gray-200'}`}>
-                    {supportTickets.map((ticket) => (
-                      <button
-                        key={ticket.id}
-                        onClick={() => setSelectedTicket(ticket)}
-                        className={`w-full p-4 text-left transition-all ${
-                          selectedTicket?.id === ticket.id
-                            ? 'bg-cyan-500/10 border-l-4 border-cyan-500'
-                            : theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-gray-50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.ticketNumber || ticket.id}</span>
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(ticket.status)}`}>
-                            {ticket.status}
-                          </span>
-                        </div>
-                        <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{ticket.issueType || 'Support Request'}</p>
-                        <p className="text-xs text-gray-500 mt-1">{ticket.company || ticket.name} • {formatDate(ticket.createdAt)}</p>
-                      </button>
-                    ))}
+                  <div className={`divide-y ${theme === 'dark' ? 'divide-white/10' : 'divide-gray-200'}`}>
+                    {filteredTickets.length === 0 ? (
+                      <div className="p-8 text-center">
+                        <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>No tickets match your search</p>
+                      </div>
+                    ) : (
+                      filteredTickets.map((ticket) => (
+                        <button
+                          key={ticket.id}
+                          onClick={() => setSelectedTicket(ticket)}
+                          className={`w-full p-4 text-left transition-all ${
+                            selectedTicket?.id === ticket.id
+                              ? 'bg-cyan-500/10 border-l-4 border-cyan-500'
+                              : theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.ticketNumber || ticket.id}</span>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(ticket.status)}`}>
+                              {ticket.status}
+                            </span>
+                          </div>
+                          <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{ticket.issueType || 'Support Request'}</p>
+                          <p className="text-xs text-gray-500 mt-1">{ticket.company || ticket.name} • {formatDate(ticket.createdAt)}</p>
+                        </button>
+                      ))
+                    )}
                   </div>
                 </div>
 
-                {/* Ticket Detail */}
+                {/* Ticket Detail - Below List */}
                 {selectedTicket ? (
                   <div className={`rounded-xl border overflow-hidden ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`}>
                     <div className={`p-4 border-b flex items-center justify-between ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
@@ -2799,7 +2869,7 @@ export default function DashboardPage() {
                       <div className={`rounded-lg p-4 ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'}`}>
                         <h4 className={`text-sm font-medium mb-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Update Status</h4>
                         <div className="flex flex-wrap gap-2">
-                          {['open', 'in-progress', 'waiting-customer', 'resolved', 'closed'].map((status) => (
+                          {['open', 'in-progress', 'waiting-customer', 'resolved', 'closed', 'archived'].map((status) => (
                             <button
                               key={status}
                               onClick={() => updateTicketStatus(selectedTicket.id, status, 'support')}
@@ -2993,6 +3063,62 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        );
+
+      case 'archived':
+        const archivedTickets = supportTickets.filter(t => t.status === 'archived');
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Archived Tickets</h2>
+              <div className="flex items-center gap-4">
+                <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{archivedTickets.length} archived tickets</span>
+              </div>
+            </div>
+
+            {archivedTickets.length === 0 ? (
+              <div className={`text-center py-16 rounded-xl border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`}>
+                <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+                <h3 className={`text-lg font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>No archived tickets</h3>
+                <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>Archived tickets will appear here</p>
+              </div>
+            ) : (
+              <div className={`rounded-xl border overflow-hidden ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`}>
+                <div className={`p-4 border-b ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
+                  <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Archived Tickets</h3>
+                </div>
+                <div className={`divide-y ${theme === 'dark' ? 'divide-white/10' : 'divide-gray-200'}`}>
+                  {archivedTickets.map((ticket) => (
+                    <div
+                      key={ticket.id}
+                      className={`p-4 ${theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-gray-50'}`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{ticket.ticketNumber || ticket.id}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 rounded text-xs font-medium bg-gray-500/20 text-gray-400`}>
+                            archived
+                          </span>
+                          <button
+                            onClick={() => updateTicketStatus(ticket.id, 'open', 'support')}
+                            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                              theme === 'dark' ? 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30' : 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200'
+                            }`}
+                          >
+                            Restore
+                          </button>
+                        </div>
+                      </div>
+                      <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{ticket.issueType || 'Support Request'}</p>
+                      <p className="text-xs text-gray-500 mt-1">{ticket.company || ticket.name} • {formatDate(ticket.createdAt)}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
