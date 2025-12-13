@@ -78,6 +78,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/our-work" className={`transition-colors ${theme === 'dark' ? 'hover:text-white' : 'hover:text-gray-900'}`}>
+                  Our Work
+                </Link>
+              </li>
+              <li>
                 <Link
                   href="/start-project"
                   className="inline-block px-4 py-2 mt-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-sm font-semibold rounded-lg hover:shadow-lg transition-shadow"

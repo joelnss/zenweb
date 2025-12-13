@@ -1,5 +1,6 @@
 'use client';
 
+import { use } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useTheme } from '@/lib/theme/theme-context';
@@ -21,44 +22,63 @@ const blogPosts: Record<string, {
     category: 'Performance',
     content: (
       <>
-        <p>The eCommerce industry is obsessed with speed, but most are measuring the wrong things. When we talk about "sub-second load times," what does that actually mean for your revenue?</p>
+        <p>There's a moment in every garage—right before the engine turns over—when you can smell possibility. That sharp bite of motor oil, the metallic promise of something about to move. That's what a fast website should feel like. Immediate. Inevitable.</p>
 
-        <h2>The Benchmark Myth</h2>
-        <p>Every agency claims fast sites. Few can prove it. The problem isn't speed—it's measurement. Google's Core Web Vitals changed the game, but most teams still chase vanity metrics that don't correlate with conversions.</p>
-        <p>Here's what actually matters:</p>
-        <ul>
-          <li><strong>Largest Contentful Paint (LCP):</strong> When does the main content appear? Under 2.5 seconds is "good," but under 1 second is where conversion rates spike.</li>
-          <li><strong>First Input Delay (FID):</strong> How fast can users interact? Anything over 100ms feels laggy.</li>
-          <li><strong>Cumulative Layout Shift (CLS):</strong> Does your page jump around? Visual stability builds trust.</li>
-        </ul>
+        <p>The eCommerce industry talks endlessly about speed. But most of them are measuring the wrong things entirely. Like timing a race car by how loud it sounds.</p>
 
-        <h2>Real Metrics From Real Stores</h2>
-        <p>We've analyzed hundreds of eCommerce deployments. The pattern is clear:</p>
-        <ul>
-          <li>Every 100ms of delay costs 1% in conversions</li>
-          <li>Mobile users are 5x more sensitive to speed than desktop</li>
-          <li>Product pages need to load faster than homepages (users are closer to purchase)</li>
-        </ul>
+        <h2>The Myth We've All Been Sold</h2>
 
-        <h2>What Actually Slows You Down</h2>
-        <p>It's rarely what you think. The usual suspects:</p>
-        <ul>
-          <li><strong>Third-party scripts:</strong> Analytics, chat widgets, and tracking pixels can add 2-3 seconds alone</li>
-          <li><strong>Unoptimized images:</strong> A single hero image can be 5MB. It should be 50KB.</li>
-          <li><strong>Render-blocking resources:</strong> CSS and JavaScript that blocks the critical path</li>
-          <li><strong>Poor hosting:</strong> Cheap shared hosting with 500ms+ server response times</li>
-        </ul>
+        <p>Every agency claims fast sites. Precious few can prove it.</p>
+
+        <p>The problem isn't speed itself—it's how we measure it. Google's Core Web Vitals changed the conversation, but most teams are still chasing vanity metrics. Numbers that look impressive in a pitch deck but don't move a single needle where it matters: the checkout.</p>
+
+        <h2>What Actually Matters</h2>
+
+        <p><strong>Largest Contentful Paint (LCP)</strong> — When does your customer see something real? Under 2.5 seconds is considered "good." Under 1 second is where conversion rates start climbing like RPMs in a clean engine.</p>
+
+        <p><strong>First Input Delay (FID)</strong> — How fast can they touch something and feel it respond? Anything over 100 milliseconds feels like lag. Like a sticky throttle. Users notice.</p>
+
+        <p><strong>Cumulative Layout Shift (CLS)</strong> — Does your page jump around while loading? Visual stability builds trust. Instability breeds abandonment.</p>
+
+        <h2>The Numbers Don't Lie</h2>
+
+        <p>We've put hundreds of eCommerce sites on the dyno. The pattern is ruthlessly consistent:</p>
+
+        <p>Every 100 milliseconds of delay costs you 1% in conversions. That's not poetry—that's physics.</p>
+
+        <p>Mobile users are five times more sensitive to speed than desktop. They're standing in line. They're between meetings. They don't wait.</p>
+
+        <p>Product pages need to load faster than homepages. By the time someone's looking at a product, they're closer to the money. Don't fumble the handoff.</p>
+
+        <h2>What's Actually Slowing You Down</h2>
+
+        <p>It's rarely what you think. The culprits hide in plain sight:</p>
+
+        <p><strong>Third-party scripts.</strong> Analytics, chat widgets, tracking pixels—each one a small weight. Together, they can add 2-3 seconds of drag. Death by a thousand cuts.</p>
+
+        <p><strong>Unoptimized images.</strong> I've seen hero images weighing in at 5 megabytes. They should be 50 kilobytes. That's not a typo. That's a 100x difference.</p>
+
+        <p><strong>Render-blocking resources.</strong> CSS and JavaScript that refuses to let the page breathe until it's fully loaded. Like flooding an engine before it can turn over.</p>
+
+        <p><strong>Bargain hosting.</strong> Cheap shared servers with 500ms response times before a single byte of your site even starts loading. You're losing the race before it begins.</p>
 
         <h2>The Fix</h2>
-        <p>Speed isn't about doing more—it's about doing less, faster. Our approach:</p>
-        <ol>
-          <li>Audit ruthlessly: Remove what doesn't convert</li>
-          <li>Optimize the critical path: First paint under 500ms</li>
-          <li>Edge everything: CDN for static, edge functions for dynamic</li>
-          <li>Lazy load aggressively: Below-fold content loads on scroll</li>
-        </ol>
 
-        <p>The result? Sites that feel instant. Because perception is reality, and reality is revenue.</p>
+        <p>Speed isn't about adding more horsepower. It's about removing weight. Every gram. Every unnecessary line.</p>
+
+        <p>Audit ruthlessly. If it doesn't convert, it doesn't belong.</p>
+
+        <p>Optimize the critical path. First paint under 500 milliseconds. Non-negotiable.</p>
+
+        <p>Push everything to the edge. CDN for static assets. Edge functions for the dynamic stuff. Get closer to your customers, geographically.</p>
+
+        <p>Lazy load aggressively. Below-fold content can wait its turn.</p>
+
+        <h2>The Payoff</h2>
+
+        <p>The result is a site that feels instant. That hums. That responds to every touch like a well-tuned machine.</p>
+
+        <p>Because in the end, perception is reality. And reality is revenue.</p>
       </>
     ),
   },
@@ -70,43 +90,47 @@ const blogPosts: Record<string, {
     category: 'Architecture',
     content: (
       <>
-        <p>Formula 2 cars aren't fast because they have more—they're fast because every unnecessary gram has been eliminated. The same principle applies to web architecture.</p>
+        <p>Racing engineers have a saying: the best part is no part. Every component on an F2 car has to justify its weight. If it doesn't contribute to going faster, it gets removed.</p>
 
-        <h2>The Weight Problem</h2>
-        <p>Most web projects accumulate weight over time. A dependency here, a library there, a "quick fix" that becomes permanent. Before you know it, your bundle is 2MB and your server is doing work it doesn't need to do.</p>
-        <p>We call this "architectural drag." It's invisible until it isn't.</p>
+        <p>Web development should work the same way. But it usually doesn't.</p>
 
-        <h2>Intentional Compute</h2>
-        <p>Every computation should justify its existence. Questions we ask on every project:</p>
-        <ul>
-          <li>Does this need to happen on the server, or can it be static?</li>
-          <li>Does this need JavaScript, or can it be CSS?</li>
-          <li>Does this need to load now, or can it wait?</li>
-          <li>Does this need to exist at all?</li>
-        </ul>
+        <h2>How Websites Get Slow</h2>
 
-        <h2>The Elimination Checklist</h2>
-        <p>Before adding anything, we subtract:</p>
-        <ul>
-          <li><strong>Dependencies:</strong> Can we write 20 lines instead of importing 20KB?</li>
-          <li><strong>API calls:</strong> Can we cache this? Pre-render it? Eliminate it?</li>
-          <li><strong>Database queries:</strong> Are we fetching data we don't display?</li>
-          <li><strong>Animations:</strong> Does this motion serve the user or just look cool?</li>
-        </ul>
+        <p>Nobody sets out to build a slow website. It happens gradually. A tracking script here. A new library there. A "temporary" fix that becomes permanent. Six months later, your site loads 47 JavaScript files before showing a single product.</p>
 
-        <h2>Real Example: The 90% Reduction</h2>
-        <p>A recent project inherited a React app with 47 dependencies. After our audit:</p>
-        <ul>
-          <li>Dependencies: 47 → 12</li>
-          <li>Bundle size: 1.8MB → 180KB</li>
-          <li>Build time: 4 minutes → 22 seconds</li>
-          <li>Time to Interactive: 4.2s → 0.8s</li>
-        </ul>
-        <p>Same functionality. 90% less weight. That's the power of elimination.</p>
+        <p>We call this architectural drag. It's the invisible weight that accumulates when teams optimize for shipping features instead of shipping fast features.</p>
 
-        <h2>The F2 Philosophy</h2>
-        <p>In racing, they say "adding lightness" is faster than adding power. In web development, removing code is faster than optimizing it.</p>
-        <p>The fastest request is the one you never make. The fastest code is the code that doesn't exist.</p>
+        <p>The average eCommerce site now loads over 2MB of resources. Most of that is unnecessary.</p>
+
+        <h2>The Questions That Matter</h2>
+
+        <p>Before we add anything to a project, we ask four questions:</p>
+
+        <p>First: does this need to run on the server, or can it be generated at build time? Static content is always faster than dynamic content.</p>
+
+        <p>Second: does this need JavaScript, or can we do it with CSS? CSS animations run on the GPU. JavaScript runs on the main thread where it competes with everything else.</p>
+
+        <p>Third: does this need to load immediately, or can it wait until the user scrolls? Lazy loading is one of the simplest performance wins available.</p>
+
+        <p>Fourth: does this need to exist at all? Sometimes the best optimization is deletion.</p>
+
+        <h2>A Real Example</h2>
+
+        <p>We recently audited a React application with 47 npm dependencies. The client thought they needed all of them. After reviewing what each package actually did, we found a different story.</p>
+
+        <p>Twelve dependencies were doing useful work. The other thirty-five were either redundant, unused, or could be replaced with a few lines of custom code.</p>
+
+        <p>The results: bundle size dropped from 1.8MB to 180KB. Build time went from 4 minutes to 22 seconds. Time to Interactive improved from 4.2 seconds to 0.8 seconds.</p>
+
+        <p>Same features. Same functionality. Just less weight.</p>
+
+        <h2>Building Light From Day One</h2>
+
+        <p>The easiest way to have a fast website is to never make it slow in the first place. That means questioning every addition before it happens, not trying to optimize your way out of bloat after the fact.</p>
+
+        <p>When someone proposes adding a new tool or library, we ask what we can remove to make room for it. The answer is usually that we don't need the new thing after all.</p>
+
+        <p>Less code means fewer bugs. Fewer bugs mean less maintenance. Less maintenance means more time building features that matter.</p>
       </>
     ),
   },
@@ -118,42 +142,45 @@ const blogPosts: Record<string, {
     category: 'UX',
     content: (
       <>
-        <p>Your users don't care about your tech stack. They don't care about your architecture. They care about one thing: did this feel fast?</p>
+        <p>Here's something that took the industry too long to figure out: users don't experience your technology. They experience the wait.</p>
 
-        <h2>Perception vs. Reality</h2>
-        <p>Here's the thing about speed: it's psychological. A site that loads in 2 seconds but shows progress feels faster than a site that loads in 1.5 seconds with a blank screen.</p>
-        <p>This is why perceived performance often matters more than actual performance.</p>
+        <p>Nobody has ever bought a product because the website was built with React instead of Vue. But plenty of people have abandoned their carts because the checkout took too long to load.</p>
 
-        <h2>The Psychology of Waiting</h2>
-        <p>Research shows:</p>
-        <ul>
-          <li><strong>0-100ms:</strong> Feels instant</li>
-          <li><strong>100-300ms:</strong> Noticeable but acceptable</li>
-          <li><strong>300-1000ms:</strong> User loses focus</li>
-          <li><strong>1000ms+:</strong> User loses trust</li>
-        </ul>
-        <p>After 3 seconds, 53% of mobile users abandon. They're not checking your features—they're already gone.</p>
+        <h2>How Speed Actually Works in the Brain</h2>
 
-        <h2>Features vs. Speed: The False Choice</h2>
-        <p>Teams often frame this as a tradeoff. "We need these features, so the site will be slower." This is backwards.</p>
-        <p>Speed IS a feature. The most important one. A fast site with fewer features will outperform a slow site with more features. Every time.</p>
+        <p>Human perception of time isn't linear. The difference between 100 milliseconds and 200 milliseconds feels negligible. The difference between 2 seconds and 4 seconds feels enormous. Our brains are wired to notice delays once they cross certain thresholds.</p>
 
-        <h2>What Users Actually Want</h2>
-        <ul>
-          <li><strong>Immediate feedback:</strong> Click → something happens</li>
-          <li><strong>Visual stability:</strong> Things don't jump around</li>
-          <li><strong>Progressive loading:</strong> Content appears in order of importance</li>
-          <li><strong>Responsive interactions:</strong> Buttons feel clickable, scrolling feels smooth</li>
-        </ul>
+        <p>Under 100 milliseconds, interactions feel instant. The button pressed, the thing happened. No conscious awareness of waiting.</p>
 
-        <h2>The Delay Tax</h2>
-        <p>Every millisecond of delay is a tax on user patience. And that tax compounds:</p>
-        <ul>
-          <li>Slow homepage → fewer product views</li>
-          <li>Slow product page → fewer add-to-carts</li>
-          <li>Slow checkout → abandoned carts</li>
-        </ul>
-        <p>The math is simple: delay destroys revenue. Speed creates it.</p>
+        <p>Between 100 and 300 milliseconds, users notice the delay but accept it as normal. This is the sweet spot for most interactions.</p>
+
+        <p>Between 300 milliseconds and 1 second, attention starts to drift. The brain registers that something is taking time. Users become aware they're waiting.</p>
+
+        <p>Beyond 1 second, you've lost them. Maybe not literally, but psychologically they've disengaged. They're thinking about other things, other tabs, other options.</p>
+
+        <h2>The Research Says Abandon</h2>
+
+        <p>Google published a study showing that 53% of mobile users abandon sites that take longer than 3 seconds to load. That's more than half your potential customers, gone before they see your product.</p>
+
+        <p>The same research found that the probability of bounce increases 32% as page load time goes from 1 second to 3 seconds. Every second costs you customers.</p>
+
+        <p>These aren't edge cases. This is the median experience for most eCommerce sites.</p>
+
+        <h2>Speed Is Not a Technical Concern</h2>
+
+        <p>When development teams discuss performance, it usually gets categorized as a technical issue. Something for engineers to worry about after the features are done.</p>
+
+        <p>This is backwards. Speed is the feature. It's the most important feature you can ship because it affects every other feature you build.</p>
+
+        <p>A beautiful product page that takes 5 seconds to load will convert worse than an ugly product page that loads instantly. Users have to experience your design before they can appreciate it.</p>
+
+        <h2>What Good Feels Like</h2>
+
+        <p>When a site is genuinely fast, you can feel it. Clicks respond immediately. Pages appear before you finish thinking about them. The scroll feels smooth and connected to your finger.</p>
+
+        <p>This isn't magic. It's the absence of delay. It's what happens when every element of the stack is optimized for speed over convenience.</p>
+
+        <p>Users can't articulate what makes a fast site feel good. But they notice when it's missing. And they vote with their attention.</p>
       </>
     ),
   },
@@ -165,46 +192,49 @@ const blogPosts: Record<string, {
     category: 'Infrastructure',
     content: (
       <>
-        <p>Everyone promises 99.99% uptime. But what does that actually mean for your business? Let's do the math.</p>
+        <p>Uptime percentages look impressive in sales pitches. Four nines, five nines, six nines. But what do these numbers actually mean for a business trying to sell products online?</p>
 
-        <h2>The Uptime Math</h2>
-        <ul>
-          <li><strong>99% uptime:</strong> 3.65 days of downtime per year</li>
-          <li><strong>99.9% uptime:</strong> 8.76 hours of downtime per year</li>
-          <li><strong>99.99% uptime:</strong> 52.6 minutes of downtime per year</li>
-          <li><strong>99.999% uptime:</strong> 5.26 minutes of downtime per year</li>
-        </ul>
-        <p>That jump from 99% to 99.99% isn't incremental—it's exponential in both difficulty and value.</p>
+        <p>The math is worth understanding because the difference between 99% and 99.99% isn't 0.99%. It's the difference between being down for three days a year versus being down for less than an hour.</p>
 
-        <h2>The Hidden Cost of "Down"</h2>
-        <p>Downtime isn't just lost sales. It's:</p>
-        <ul>
-          <li><strong>Lost trust:</strong> Users remember when you weren't there</li>
-          <li><strong>SEO damage:</strong> Google notices when your site is unavailable</li>
-          <li><strong>Support costs:</strong> Every minute down generates tickets</li>
-          <li><strong>Team stress:</strong> 3 AM pages destroy morale</li>
-        </ul>
+        <h2>Translating Percentages to Real Time</h2>
 
-        <h2>Speed and Reliability: The Connection</h2>
-        <p>Here's what most people miss: fast code is reliable code. Why?</p>
-        <ul>
-          <li>Less code = fewer failure points</li>
-          <li>Faster responses = less resource contention</li>
-          <li>Simpler architecture = easier recovery</li>
-          <li>Edge distribution = no single point of failure</li>
-        </ul>
+        <p>At 99% uptime, you're unavailable for roughly 3.65 days per year. That's 87 hours where customers can't buy from you, can't check their orders, can't reach your support.</p>
 
-        <h2>How We Achieve 99.99%</h2>
-        <ol>
-          <li><strong>Multi-region deployment:</strong> If one region fails, traffic routes automatically</li>
-          <li><strong>Health checks:</strong> Continuous monitoring with automatic failover</li>
-          <li><strong>Graceful degradation:</strong> Core functionality works even when secondary services fail</li>
-          <li><strong>Zero-downtime deploys:</strong> Updates without interruption</li>
-        </ol>
+        <p>At 99.9% uptime, that drops to 8.76 hours per year. Better, but still enough time to lose a morning's worth of Black Friday sales.</p>
 
-        <h2>The Real SLA Story</h2>
-        <p>An SLA is a promise. But promises are only as good as the architecture behind them. We don't just promise uptime—we engineer for it from day one.</p>
-        <p>Because 52 minutes of downtime per year might sound acceptable. Until it's Black Friday.</p>
+        <p>At 99.99% uptime, you're looking at 52 minutes of downtime across the entire year. For most businesses, this is acceptable. Problems happen. The goal is containing them.</p>
+
+        <p>At 99.999% uptime, you're down for about 5 minutes per year. This is where infrastructure gets expensive and complexity increases significantly.</p>
+
+        <h2>The Costs Nobody Mentions</h2>
+
+        <p>Downtime has obvious costs: lost transactions, angry customers, refunds. But the hidden costs often matter more.</p>
+
+        <p>Search engines notice when your site is unavailable. Google's crawlers might visit during an outage and find nothing. Depending on timing and frequency, this affects your rankings. Organic traffic that took years to build can erode quickly.</p>
+
+        <p>Customer trust is hard to measure but easy to lose. People remember frustration. A single bad experience during a sale or promotion creates negative associations that linger.</p>
+
+        <p>Support teams bear the immediate burden. Every minute of downtime generates tickets that take hours to resolve. The cost multiplies long after the site comes back online.</p>
+
+        <h2>Why Fast Systems Are Reliable Systems</h2>
+
+        <p>Speed and reliability aren't separate concerns. They're deeply connected.</p>
+
+        <p>Fast systems use fewer resources per request. When traffic spikes, there's more headroom before things break. Slow systems running at 80% capacity during normal times have no room to absorb unexpected load.</p>
+
+        <p>Simple architectures recover faster than complex ones. When something fails in a system with 50 interdependent services, finding the problem takes time. When something fails in a system with 5 well-designed components, the cause is usually obvious.</p>
+
+        <p>Edge distribution eliminates single points of failure. If your entire site runs from one data center and that data center has an issue, you're completely down. Distribute across regions and losing one means losing nothing.</p>
+
+        <h2>Engineering for Uptime</h2>
+
+        <p>Achieving high uptime isn't about hoping nothing breaks. It's about assuming everything will break and building systems that handle failure gracefully.</p>
+
+        <p>Health checks run constantly, testing every component. When something fails, traffic routes around it automatically. No human intervention required for common failures.</p>
+
+        <p>Deploys happen without downtime. New code rolls out gradually, with automatic rollback if metrics degrade. Shipping features doesn't mean risking availability.</p>
+
+        <p>Core functionality works even when secondary systems fail. If your recommendation engine goes down, customers can still browse and buy. Graceful degradation keeps revenue flowing during partial outages.</p>
       </>
     ),
   },
@@ -216,52 +246,62 @@ const blogPosts: Record<string, {
     category: 'Engineering',
     content: (
       <>
-        <p>The best architecture is the one you don't notice. It gets out of the way. It doesn't require a team of specialists to maintain. It just works.</p>
+        <p>Modern web development has a complexity problem. Somewhere along the way, building a website became an exercise in distributed systems engineering. Microservices, container orchestration, event-driven architectures, message queues. Tools designed for companies with thousands of engineers became standard recommendations for teams of three.</p>
 
-        <h2>The Complexity Trap</h2>
-        <p>Modern web development loves complexity. Microservices. Kubernetes. Event sourcing. These tools have their place—but that place isn't "every project."</p>
-        <p>Most businesses don't need Netflix's architecture. They need something that works, scales reasonably, and doesn't require a DevOps team to keep running.</p>
+        <p>Most businesses don't need this complexity. They need something that works, stays working, and doesn't require a dedicated infrastructure team to maintain.</p>
 
-        <h2>The Weightless Stack</h2>
-        <p>Our default stack for most projects:</p>
-        <ul>
-          <li><strong>Next.js:</strong> Full-stack React with built-in optimization</li>
-          <li><strong>Edge functions:</strong> Compute at the CDN layer, not a central server</li>
-          <li><strong>Managed database:</strong> Let someone else handle replication and backups</li>
-          <li><strong>Static where possible:</strong> Pre-render everything you can</li>
-        </ul>
-        <p>This stack handles millions of requests. It deploys in seconds. It costs less than your coffee budget.</p>
+        <h2>The Overhead Nobody Talks About</h2>
 
-        <h2>Smart Decisions, Not More Decisions</h2>
-        <p>Every architectural choice should answer: "Does this make things simpler or more complex?"</p>
-        <ul>
-          <li>Adding a service? It better remove more complexity than it adds.</li>
-          <li>Adding a dependency? It better save more code than it costs.</li>
-          <li>Adding infrastructure? It better solve a real problem you have today.</li>
-        </ul>
+        <p>Every architectural choice carries ongoing costs. Not just the initial implementation, but maintenance, monitoring, debugging, and the cognitive load on your team.</p>
 
-        <h2>Scaling Without Suffering</h2>
-        <p>The best time to optimize for scale is never. The second best time is when you actually need it.</p>
-        <p>Start simple. Measure. Optimize bottlenecks. Repeat.</p>
-        <p>Most "scale problems" are actually "bad architecture problems." Fix the architecture, and scale takes care of itself.</p>
+        <p>A Kubernetes cluster requires someone who understands Kubernetes. A microservices architecture requires distributed tracing to debug. An event-driven system requires expertise in eventual consistency.</p>
 
-        <h2>The Weightless Manifesto</h2>
-        <ol>
-          <li>Fewer moving parts = fewer failure modes</li>
-          <li>Managed services over self-hosted complexity</li>
-          <li>Static over dynamic when possible</li>
-          <li>Edge over origin for latency-sensitive operations</li>
-          <li>Simplicity is a feature, not a compromise</li>
-        </ol>
-        <p>Build light. Ship fast. Sleep well.</p>
+        <p>These aren't criticisms of the technologies. They're observations about appropriate use cases. When you're building for scale you don't have yet, you're paying costs for problems you don't have.</p>
+
+        <h2>What Actually Works for Most Businesses</h2>
+
+        <p>After building systems for hundreds of eCommerce businesses, patterns emerge. The solutions that work long-term share common characteristics.</p>
+
+        <p>Static generation handles more than most teams realize. Product catalogs, content pages, even personalization can often be pre-rendered with smart caching. Static files served from a CDN are as fast and reliable as websites get.</p>
+
+        <p>Edge computing moves logic closer to users without managing servers. Functions that run at CDN nodes handle dynamic requirements without origin server round trips.</p>
+
+        <p>Managed databases let specialists handle replication, backups, and failover. Your team focuses on your product instead of database administration.</p>
+
+        <p>Monolithic deployments simplify debugging and deployment. When everything ships together, you don't chase issues across service boundaries.</p>
+
+        <h2>The Decision Framework</h2>
+
+        <p>When evaluating any architectural addition, the question isn't whether the technology is good. It's whether it reduces overall complexity for your specific situation.</p>
+
+        <p>Adding a caching layer makes sense when you've measured a caching problem. Adding microservices makes sense when you have teams that need to deploy independently. Adding Kubernetes makes sense when you're managing enough containers that orchestration pays for itself.</p>
+
+        <p>Until those conditions exist, simpler alternatives work better.</p>
+
+        <h2>Scaling When You Need It</h2>
+
+        <p>The best time to solve scaling problems is when you have them. Premature optimization creates complexity without delivering value.</p>
+
+        <p>Simple architectures scale further than most teams expect. A well-designed monolith handles more traffic than a poorly-designed distributed system. The constraint is usually database reads, and those have straightforward solutions: caching, read replicas, static generation.</p>
+
+        <p>When you actually encounter scaling limits, you'll understand your real bottlenecks. Solutions designed for actual problems outperform solutions designed for hypothetical ones.</p>
+
+        <h2>Simplicity as Strategy</h2>
+
+        <p>Keeping systems simple isn't laziness. It's discipline. The pressure to add complexity is constant. New tools, new patterns, new best practices. Resisting that pressure preserves your ability to move fast.</p>
+
+        <p>Simple systems are easy to understand, easy to modify, and easy to fix. When something breaks at 2 AM, you want to diagnose the problem in minutes, not hours.</p>
+
+        <p>Build the simplest thing that solves your current problems. When new problems emerge, build the simplest solutions for those. Let complexity accumulate only where it earns its place.</p>
       </>
     ),
   },
 };
 
-export default function BlogPostPage({ params }: { params: { slug: string } }) {
+export default function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
   const { theme } = useTheme();
-  const post = blogPosts[params.slug];
+  const post = blogPosts[slug];
 
   if (!post) {
     notFound();
@@ -317,7 +357,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
             {/* Content */}
             <div className={`prose prose-lg max-w-none ${
               theme === 'dark' ? 'prose-invert' : ''
-            } ${theme === 'dark' ? '[&_p]:text-gray-300 [&_li]:text-gray-300 [&_h2]:text-white [&_strong]:text-white' : '[&_p]:text-gray-600 [&_li]:text-gray-600 [&_h2]:text-gray-900'}`}>
+            } ${theme === 'dark' ? '[&_p]:text-gray-300 [&_li]:text-gray-300 [&_h2]:text-white [&_strong]:text-white' : '[&_p]:text-gray-600 [&_li]:text-gray-600 [&_h2]:text-gray-900'} [&_p]:mb-6 [&_h2]:mt-12 [&_h2]:mb-6 [&_p]:leading-relaxed`}>
               {post.content}
             </div>
 

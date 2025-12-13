@@ -125,3 +125,115 @@ export async function testSmsNotification(): Promise<{ success: boolean; message
     return { success: false, message: 'Failed to send test SMS' };
   }
 }
+
+// Create user input interface
+export interface CreateUserInput {
+  email: string;
+  password: string;
+  name: string;
+  company?: string;
+  phone?: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  role?: 'user' | 'admin';
+}
+
+// Admin create new user
+export async function createUser(input: CreateUserInput): Promise<{ success: boolean; user?: User; message: string }> {
+  try {
+    const response = await fetch(`${API_BASE}/admin/users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error creating user:', error);
+    return { success: false, message: 'Failed to create user' };
+  }
+}
+
+// Project types for admin project creation
+export const PROJECT_TYPES = [
+  { value: 'new_website', label: 'New Website' },
+  { value: 'website_redesign', label: 'Website Redesign' },
+  { value: 'mobile_app', label: 'Mobile App' },
+  { value: 'ecommerce_platform', label: 'eCommerce Platform' },
+  { value: 'platform_migration', label: 'Platform Migration' },
+  { value: 'custom_development', label: 'Custom Development' },
+  { value: 'maintenance', label: 'Maintenance & Support' },
+  { value: 'consulting', label: 'Consulting' },
+  { value: 'other', label: 'Other' },
+] as const;
+
+export interface Project {
+  id: string;
+  userId: string;
+  name: string;
+  type: string;
+  description: string;
+  timeline?: string;
+  budgetRange?: string;
+  website?: string;
+  status: string;
+  invoiceApproved?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProjectInput {
+  userId: string;
+  name: string;
+  type: string;
+  description: string;
+  timeline?: string;
+  budgetRange?: string;
+  website?: string;
+}
+
+// Get all projects
+export async function getAllProjects(): Promise<Project[]> {
+  try {
+    const response = await fetch(`${API_BASE}/projects`);
+    const data = await response.json();
+    return data.success ? data.projects : [];
+  } catch (error) {
+    console.error('Error fetching projects:', error);
+    return [];
+  }
+}
+
+// Create new project
+export async function createProject(input: CreateProjectInput): Promise<{ success: boolean; project?: Project; message: string }> {
+  try {
+    const response = await fetch(`${API_BASE}/projects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error creating project:', error);
+    return { success: false, message: 'Failed to create project' };
+  }
+}
+
+// Update project
+export async function updateProject(id: string, updates: Partial<Project>): Promise<{ success: boolean; project?: Project; message: string }> {
+  try {
+    const response = await fetch(`${API_BASE}/projects/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error updating project:', error);
+    return { success: false, message: 'Failed to update project' };
+  }
+}

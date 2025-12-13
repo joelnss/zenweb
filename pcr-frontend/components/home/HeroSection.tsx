@@ -83,21 +83,21 @@ export default function HeroSection() {
                 Start a Project
               </a>
               <a
-                href="#services"
+                href="/portal"
                 className={`px-8 py-4 font-semibold rounded-lg transition-all duration-200 border ${
                   theme === 'dark'
                     ? 'bg-white/5 text-white hover:bg-white/10 border-white/10'
                     : 'bg-white text-gray-900 hover:bg-gray-50 border-gray-200'
                 }`}
               >
-                View Services
+                Submit a Ticket
               </a>
             </div>
 
             {/* Platform Logos */}
             <div className="pt-6">
               <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>Platforms we specialize in:</p>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {/* Magento */}
                 <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
                   theme === 'dark'
@@ -203,9 +203,9 @@ export default function HeroSection() {
                 transition={{ duration: 0.2 }}
               >
                 <div className={`text-4xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                  <AnimatedCounter end={50} suffix="+" duration={1.8} />
+                  <span>&lt;</span><AnimatedCounter end={2} duration={1} /><span>hr</span>
                 </div>
-                <div className={theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}>Integrations</div>
+                <div className={theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}>Avg Response</div>
               </motion.div>
               <motion.div
                 className={`backdrop-blur-sm rounded-2xl p-6 border ${
@@ -215,7 +215,7 @@ export default function HeroSection() {
                 transition={{ duration: 0.2 }}
               >
                 <div className={`text-4xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                  <span>&lt;</span><AnimatedCounter end={1} duration={0.8} /><span>s</span>
+                  <span>&lt;</span><AnimatedCounter end={2} duration={0.8} /><span>.5s</span>
                 </div>
                 <div className={theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}>Load Times</div>
               </motion.div>
@@ -227,9 +227,9 @@ export default function HeroSection() {
                 transition={{ duration: 0.2 }}
               >
                 <div className={`text-4xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                  <AnimatedCounter end={24} duration={1.5} /><span>/</span><AnimatedCounter end={7} duration={1} />
+                  <AnimatedCounter end={2847} duration={2} />
                 </div>
-                <div className={theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}>Support</div>
+                <div className={theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}>Tickets Closed</div>
               </motion.div>
             </div>
 

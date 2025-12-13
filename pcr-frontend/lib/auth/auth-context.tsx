@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getUserByEmail } from '@/lib/data/users';
 
 interface User {
   id: string;
@@ -23,6 +22,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// API base URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://zenweb.studio/api';
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,37 +39,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Check for default admin account
-    if (email === 'admin@admin.com' && password === 'admin') {
-      const user: User = {
-        id: '1',
-        email: 'admin@admin.com',
-        name: 'Admin',
-        role: 'admin',
-        username: 'admin',
-      };
-      setUser(user);
-      localStorage.setItem('pcr_user', JSON.stringify(user));
-      return true;
-    }
+    try {
+      // Call the secure backend API for login
+      const response = await fetch(`${API_URL}/users/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    // Check registered users database
-    const userAccount = getUserByEmail(email);
-    if (userAccount && userAccount.password === password) {
-      const user: User = {
-        id: userAccount.id,
-        email: userAccount.email,
-        name: userAccount.name,
-        role: userAccount.role,
-        phone: userAccount.phone,
-        company: userAccount.company,
-      };
-      setUser(user);
-      localStorage.setItem('pcr_user', JSON.stringify(user));
-      return true;
-    }
+      const data = await response.json();
 
-    return false;
+      if (data.success && data.user) {
+        const loggedInUser: User = {
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name,
+          role: data.user.role,
+          phone: data.user.phone,
+          company: data.user.company,
+        };
+        setUser(loggedInUser);
+        localStorage.setItem('pcr_user', JSON.stringify(loggedInUser));
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
+    }
   };
 
   const logout = () => {

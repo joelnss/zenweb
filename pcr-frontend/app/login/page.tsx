@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { registerUser } from '@/lib/data/users';
 
 function AuthForm() {
+  console.log('[AuthForm] Component mounting...');
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,6 +21,8 @@ function AuthForm() {
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  console.log('[AuthForm] Hooks initialized, mode:', mode);
 
   useEffect(() => {
     if (searchParams.get('registered') === 'true') {
@@ -344,6 +347,7 @@ function AuthForm() {
               Back to Home
             </Link>
           </div>
+
         </div>
       </div>
     </div>
@@ -351,12 +355,14 @@ function AuthForm() {
 }
 
 export default function LoginPage() {
+  console.log('[LoginPage] Rendering LoginPage component');
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-400">Loading...</p>
+          <p className="text-gray-500 text-xs mt-2">If this persists, check browser console</p>
         </div>
       </div>
     }>

@@ -174,7 +174,7 @@ export default function AboutPage() {
               transition={{ duration: 0.6 }}
             >
               <h2 className={`text-4xl lg:text-5xl font-bold mb-6 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                No Fluff. No BS.
+                No fluff. Down to business approach.
               </h2>
               <p className={`text-lg leading-relaxed mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                 We've worked with agencies that charge for meetings about meetings. That's not us. When you work with Zenweb, you get direct access to the people building your project. No account managers, no middlemen, no runaround.

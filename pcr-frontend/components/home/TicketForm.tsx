@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useRouter } from 'next/navigation';
@@ -94,6 +94,10 @@ interface TicketFormData {
   timeline: string;
   description: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
+  // Honeypot fields (should remain empty)
+  _honeypot: string;
+  website_url: string;
+  fax_number: string;
 }
 
 interface TicketFormProps {
@@ -104,6 +108,7 @@ export default function TicketForm({ preSelectedService }: TicketFormProps = {})
   const { theme } = useTheme();
   const { user, isAuthenticated, login } = useAuth();
   const router = useRouter();
+  const successRef = useRef<HTMLDivElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [ticketNumber, setTicketNumber] = useState('');
@@ -125,6 +130,10 @@ export default function TicketForm({ preSelectedService }: TicketFormProps = {})
     timeline: '',
     description: '',
     priority: 'medium',
+    // Honeypot fields - should stay empty
+    _honeypot: '',
+    website_url: '',
+    fax_number: '',
   });
 
   useEffect(() => {
@@ -212,6 +221,11 @@ export default function TicketForm({ preSelectedService }: TicketFormProps = {})
       setTicketNumber(result.ticket.ticketNumber);
       setSuccess(true);
 
+      // Scroll to success message
+      setTimeout(() => {
+        successRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+
       setFormData({
         name: user?.name || '',
         email: user?.email || '',
@@ -225,6 +239,9 @@ export default function TicketForm({ preSelectedService }: TicketFormProps = {})
         timeline: '',
         description: '',
         priority: 'medium',
+        _honeypot: '',
+        website_url: '',
+        fax_number: '',
       });
 
       setPassword('');
@@ -250,7 +267,7 @@ export default function TicketForm({ preSelectedService }: TicketFormProps = {})
 
   if (success) {
     return (
-      <div className={`py-20 ${theme === 'dark' ? 'bg-gray-950' : 'bg-white'}`}>
+      <div ref={successRef} className={`py-20 ${theme === 'dark' ? 'bg-gray-950' : 'bg-white'}`}>
         <div className="container mx-auto px-6">
           <div className={`max-w-2xl mx-auto backdrop-blur-sm rounded-2xl p-8 border ${
             theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-lg'
@@ -276,59 +293,56 @@ export default function TicketForm({ preSelectedService }: TicketFormProps = {})
   }
 
   return (
-    <div className={`py-20 relative overflow-hidden ${theme === 'dark' ? 'bg-gray-950' : 'bg-white'}`} id="submit-ticket">
-      {/* Animated background orbs - Dark mode only */}
-      {theme === 'dark' && (
-        <>
-          <motion.div
-            className="absolute top-1/4 -left-20 w-80 h-80 bg-gray-600/10 rounded-full blur-3xl"
-            animate={{
-              x: [0, 70, 0],
-              y: [0, 60, 0],
-              scale: [1, 1.25, 1],
-            }}
-            transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <motion.div
-            className="absolute bottom-1/4 -right-20 w-80 h-80 bg-gray-500/10 rounded-full blur-3xl"
-            animate={{
-              x: [0, -60, 0],
-              y: [0, -70, 0],
-              scale: [1, 1.2, 1],
-            }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-          />
-          <motion.div
-            className="absolute top-1/2 left-1/2 w-64 h-64 bg-gray-600/10 rounded-full blur-3xl"
-            animate={{
-              x: [0, 50, 0],
-              y: [0, -50, 0],
-              scale: [1, 0.8, 1],
-            }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          />
-        </>
-      )}
-      <div className="container mx-auto px-6 relative z-10">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-10">
-            <h2 className={`text-4xl font-bold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Start Your Project</h2>
-            <p className={`text-lg ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-              Tell us about your web development needs and we'll craft a solution
+    <div className={`relative ${theme === 'dark' ? 'bg-gray-950' : 'bg-white'}`} id="submit-ticket">
+      <div className="relative z-10">
+        {/* Login prompt for unauthenticated users */}
+        {!isAuthenticated && (
+          <div className="text-center mb-6">
+            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+              Create an account when you submit to track your project • Already have an account? <a href="/login" className="text-blue-400 font-semibold hover:underline">Log in</a>
             </p>
-            {!isAuthenticated && (
-              <p className={`text-sm mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                Create an account when you submit to track your project • Already have an account? <a href="/login" className="text-blue-400 font-semibold hover:underline">Log in</a>
-              </p>
-            )}
           </div>
+        )}
 
-          {/* Form */}
+        {/* Form */}
           <div className={`backdrop-blur-sm rounded-2xl p-8 border ${
             theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-lg'
           }`}>
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Honeypot fields - hidden from real users, bots will fill them */}
+              <div style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0, overflow: 'hidden' }} aria-hidden="true">
+                <label htmlFor="_honeypot">Leave this field empty</label>
+                <input
+                  type="text"
+                  id="_honeypot"
+                  name="_honeypot"
+                  value={formData._honeypot}
+                  onChange={handleChange}
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
+                <label htmlFor="website_url">Website URL</label>
+                <input
+                  type="text"
+                  id="website_url"
+                  name="website_url"
+                  value={formData.website_url}
+                  onChange={handleChange}
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
+                <label htmlFor="fax_number">Fax Number</label>
+                <input
+                  type="text"
+                  id="fax_number"
+                  name="fax_number"
+                  value={formData.fax_number}
+                  onChange={handleChange}
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
+              </div>
+
               {/* Contact Information */}
               <div className={`border-b pb-6 ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
                 <h3 className={`text-lg font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Contact Information</h3>
@@ -698,6 +712,39 @@ export default function TicketForm({ preSelectedService }: TicketFormProps = {})
                 />
               </div>
 
+              {/* Form Progress Steps */}
+              <div className={`rounded-xl p-4 ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'}`}>
+                <div className={`text-xs font-medium uppercase tracking-wider mb-3 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Form Progress
+                </div>
+                <div className="grid grid-cols-5 gap-2">
+                  {[
+                    { label: 'Contact', done: !!(formData.name && formData.email) },
+                    { label: 'Project', done: !!(formData.platform && formData.serviceCategory) },
+                    { label: 'Hosting', done: !!formData.hostingNeeds },
+                    { label: 'Budget', done: !!(formData.budget && formData.timeline) },
+                    { label: 'Details', done: !!formData.description },
+                  ].map((step, idx) => (
+                    <div key={idx} className="text-center">
+                      <div className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                        step.done
+                          ? 'bg-green-500 text-white'
+                          : theme === 'dark' ? 'bg-white/10 text-gray-500' : 'bg-gray-200 text-gray-400'
+                      }`}>
+                        {step.done ? (
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : idx + 1}
+                      </div>
+                      <div className={`text-xs mt-1 ${step.done ? (theme === 'dark' ? 'text-green-400' : 'text-green-600') : (theme === 'dark' ? 'text-gray-500' : 'text-gray-400')}`}>
+                        {step.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Submit Button */}
               <button
                 type="submit"
@@ -716,7 +763,6 @@ export default function TicketForm({ preSelectedService }: TicketFormProps = {})
               </p>
             </form>
           </div>
-        </div>
       </div>
     </div>
   );

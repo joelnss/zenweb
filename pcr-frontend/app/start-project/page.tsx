@@ -47,26 +47,20 @@ function StartProjectContent() {
         </div>
       )}
 
-      {/* Hero Section */}
-      <section className="relative py-16 overflow-hidden">
+      {/* Hero Section - Compact */}
+      <section className="relative pt-8 pb-4 overflow-hidden">
         <div className="container mx-auto px-6 relative z-10">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-10"
+            className="text-center"
           >
-            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm mb-6 ${
-              theme === 'dark' ? 'bg-white/5 border border-white/10 text-gray-400' : 'bg-gray-100 border border-gray-200 text-gray-600'
-            }`}>
-              <span className={`w-2 h-2 rounded-full animate-pulse ${theme === 'dark' ? 'bg-white' : 'bg-gray-900'}`} />
-              Start Your Project
-            </div>
-            <h1 className={`text-4xl lg:text-5xl font-bold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              Let's Build Something{' '}
-              <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Amazing</span>
+            <h1 className={`text-3xl lg:text-4xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              Start Your{' '}
+              <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Project</span>
             </h1>
-            <p className={`text-lg max-w-2xl mx-auto ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-              Tell us about your project and we'll craft a custom solution tailored to your business needs.
+            <p className={`text-base max-w-xl mx-auto ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              Tell us about your project and we'll craft a custom solution.
             </p>
           </motion.div>
         </div>

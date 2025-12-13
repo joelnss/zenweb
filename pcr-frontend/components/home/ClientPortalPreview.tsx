@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/theme/theme-context';
@@ -77,7 +76,7 @@ export default function ClientPortalPreview() {
             </div>
           </motion.div>
 
-          {/* Dashboard Image */}
+          {/* Dashboard Mockup - CSS Based */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -86,23 +85,90 @@ export default function ClientPortalPreview() {
             className="relative"
           >
             <div className={`relative rounded-2xl overflow-hidden border shadow-2xl ${
-              theme === 'dark' ? 'border-white/10' : 'border-gray-200'
+              theme === 'dark' ? 'bg-gray-900 border-white/10' : 'bg-gray-50 border-gray-200'
             }`}>
-              <Image
-                src="/images/dashboard-preview.png"
-                alt="Zenweb Client Portal Dashboard"
-                width={1200}
-                height={800}
-                className="w-full h-auto"
-                priority
-              />
+              {/* Dashboard Header */}
+              <div className={`px-4 py-3 border-b flex items-center justify-between ${
+                theme === 'dark' ? 'bg-gray-800/50 border-white/10' : 'bg-white border-gray-200'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                  </div>
+                  <span className={`text-sm font-medium ml-3 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                    Zenweb Client Portal Dashboard
+                  </span>
+                </div>
+              </div>
 
-              {/* Decorative gradient overlay */}
-              <div className={`absolute inset-0 pointer-events-none ${
-                theme === 'dark'
-                  ? 'bg-gradient-to-t from-gray-950/20 to-transparent'
-                  : 'bg-gradient-to-t from-gray-50/20 to-transparent'
-              }`} />
+              {/* Dashboard Content */}
+              <div className="p-4 space-y-4">
+                {/* Stats Row */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-white/5' : 'bg-white border border-gray-200'}`}>
+                    <div className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>Active Projects</div>
+                    <div className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>3</div>
+                    <div className="text-xs text-green-500">+1 this week</div>
+                  </div>
+                  <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-white/5' : 'bg-white border border-gray-200'}`}>
+                    <div className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>Open Tickets</div>
+                    <div className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>2</div>
+                    <div className="text-xs text-blue-500">In progress</div>
+                  </div>
+                  <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-white/5' : 'bg-white border border-gray-200'}`}>
+                    <div className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>Invoices</div>
+                    <div className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>$4.2k</div>
+                    <div className="text-xs text-cyan-500">All paid</div>
+                  </div>
+                </div>
+
+                {/* Project Progress */}
+                <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-white/5' : 'bg-white border border-gray-200'}`}>
+                  <div className={`text-sm font-medium mb-3 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Project Progress</div>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>E-commerce Redesign</span>
+                        <span className="text-cyan-500">75%</span>
+                      </div>
+                      <div className={`h-2 rounded-full ${theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'}`}>
+                        <div className="h-full w-3/4 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500" />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>API Integration</span>
+                        <span className="text-cyan-500">40%</span>
+                      </div>
+                      <div className={`h-2 rounded-full ${theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'}`}>
+                        <div className="h-full w-2/5 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Activity */}
+                <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-white/5' : 'bg-white border border-gray-200'}`}>
+                  <div className={`text-sm font-medium mb-3 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Recent Activity</div>
+                  <div className="space-y-2">
+                    {[
+                      { action: 'Ticket #142 resolved', time: '2h ago', color: 'text-green-500' },
+                      { action: 'New invoice generated', time: '5h ago', color: 'text-blue-500' },
+                      { action: 'Project milestone completed', time: '1d ago', color: 'text-cyan-500' },
+                    ].map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-1.5 h-1.5 rounded-full ${item.color.replace('text-', 'bg-')}`} />
+                          <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>{item.action}</span>
+                        </div>
+                        <span className={theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}>{item.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Floating decorative elements */}

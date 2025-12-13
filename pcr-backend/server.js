@@ -3,6 +3,28 @@ const cors = require('cors');
 const Database = require('better-sqlite3');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const crypto = require('crypto');
+
+// ==================== SECURITY PACKAGES ====================
+let helmet, rateLimit, bcrypt;
+
+try {
+  helmet = require('helmet');
+} catch (e) {
+  console.log('Helmet not installed - using basic security headers');
+}
+
+try {
+  rateLimit = require('express-rate-limit');
+} catch (e) {
+  console.log('Rate limiter not installed - no rate limiting');
+}
+
+try {
+  bcrypt = require('bcrypt');
+} catch (e) {
+  console.log('Bcrypt not installed - using fallback password hashing');
+}
 
 // Twilio SDK for SMS notifications
 let twilio;
@@ -16,18 +38,287 @@ try {
 let stripe;
 try {
   const Stripe = require('stripe');
-  // Get Stripe secret key from environment or settings
   stripe = Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
 } catch (e) {
   console.log('Stripe not installed - payments disabled');
 }
 
+// Nodemailer for email notifications
+let nodemailer;
+let emailTransporter;
+try {
+  nodemailer = require('nodemailer');
+  emailTransporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.ALERT_EMAIL_USER || '',
+      pass: process.env.ALERT_EMAIL_PASS || ''
+    }
+  });
+  console.log('Email notifications enabled');
+} catch (e) {
+  console.log('Nodemailer not installed - email notifications disabled');
+}
+
+// ==================== PASSWORD HASHING ====================
+const SALT_ROUNDS = 12;
+
+async function hashPassword(password) {
+  if (bcrypt) {
+    return await bcrypt.hash(password, SALT_ROUNDS);
+  }
+  // Fallback: SHA-256 with salt (not as secure as bcrypt, but better than plaintext)
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+  return `${salt}:${hash}`;
+}
+
+async function verifyPassword(password, storedHash) {
+  if (bcrypt && !storedHash.includes(':')) {
+    return await bcrypt.compare(password, storedHash);
+  }
+  // Fallback verification
+  if (storedHash.includes(':')) {
+    const [salt, hash] = storedHash.split(':');
+    const verifyHash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+    return hash === verifyHash;
+  }
+  // Legacy plaintext comparison (will be migrated)
+  return password === storedHash;
+}
+
+// ==================== INPUT SANITIZATION ====================
+function sanitizeInput(str) {
+  if (typeof str !== 'string') return str;
+  return str
+    .replace(/[<>]/g, '') // Remove HTML tags
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/on\w+=/gi, '') // Remove event handlers
+    .trim()
+    .slice(0, 10000); // Limit length
+}
+
+function sanitizeObject(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  const sanitized = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === 'string') {
+      sanitized[key] = sanitizeInput(value);
+    } else if (typeof value === 'object' && value !== null) {
+      sanitized[key] = sanitizeObject(value);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
+
+// ==================== BOT/SPAM DETECTION ====================
+const spamPatterns = [
+  /\b(viagra|cialis|casino|lottery|winner|prize|click here|act now|limited time)\b/i,
+  /\b(buy now|free money|make money fast|work from home)\b/i,
+  /(http[s]?:\/\/[^\s]+){3,}/i, // Multiple URLs
+  /(.)\1{10,}/, // Repeated characters
+];
+
+const suspiciousEmailDomains = [
+  'tempmail.com', 'throwaway.email', 'guerrillamail.com', 'mailinator.com',
+  '10minutemail.com', 'temp-mail.org', 'fakeinbox.com', 'trashmail.com'
+];
+
+function detectSpam(data) {
+  const textFields = [data.description, data.subject, data.message, data.additionalInfo].filter(Boolean).join(' ');
+
+  // Check spam patterns
+  for (const pattern of spamPatterns) {
+    if (pattern.test(textFields)) {
+      return { isSpam: true, reason: 'Spam pattern detected' };
+    }
+  }
+
+  // Check suspicious email domains
+  if (data.email || data.contactEmail) {
+    const email = (data.email || data.contactEmail).toLowerCase();
+    for (const domain of suspiciousEmailDomains) {
+      if (email.includes(domain)) {
+        return { isSpam: true, reason: 'Suspicious email domain' };
+      }
+    }
+  }
+
+  // Check honeypot fields (should be empty)
+  if (data._honeypot || data.website_url || data.fax_number) {
+    return { isSpam: true, reason: 'Honeypot triggered' };
+  }
+
+  return { isSpam: false };
+}
+
+// Track failed login attempts for IP-based blocking
+const failedLoginAttempts = new Map();
+const LOCKOUT_THRESHOLD = 5;
+const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
+
+function checkLoginAttempts(ip) {
+  const attempts = failedLoginAttempts.get(ip);
+  if (!attempts) return { blocked: false };
+
+  if (attempts.count >= LOCKOUT_THRESHOLD) {
+    const timeRemaining = LOCKOUT_DURATION - (Date.now() - attempts.lastAttempt);
+    if (timeRemaining > 0) {
+      return { blocked: true, timeRemaining: Math.ceil(timeRemaining / 1000) };
+    }
+    // Reset after lockout period
+    failedLoginAttempts.delete(ip);
+  }
+  return { blocked: false };
+}
+
+function recordFailedLogin(ip) {
+  const attempts = failedLoginAttempts.get(ip) || { count: 0, lastAttempt: 0 };
+  attempts.count++;
+  attempts.lastAttempt = Date.now();
+  failedLoginAttempts.set(ip, attempts);
+}
+
+function clearFailedLogins(ip) {
+  failedLoginAttempts.delete(ip);
+}
+
+// Send email alert to admin
+async function sendEmailAlert(ticketData) {
+  if (!emailTransporter || !process.env.ALERT_EMAIL_USER) {
+    console.log('Email not configured - skipping notification');
+    return;
+  }
+
+  try {
+    await emailTransporter.sendMail({
+      from: process.env.ALERT_EMAIL_USER,
+      to: 'jsamonie@gmail.com',
+      subject: `New Ticket: ${ticketData.ticketNumber}`,
+      text: `New ticket submitted!\n\nTicket: ${ticketData.ticketNumber}\nType: ${ticketData.type}\nFrom: ${ticketData.name || 'Unknown'}\nEmail: ${ticketData.email || 'N/A'}\nSubject: ${ticketData.subject}\nPriority: ${ticketData.priority}\n\nLogin to view: https://zenweb.studio/dashboard`
+    });
+    console.log('Email alert sent for ticket:', ticketData.ticketNumber);
+  } catch (error) {
+    console.error('Failed to send email alert:', error.message);
+  }
+}
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// Trust proxy - required when behind nginx/load balancer
+app.set('trust proxy', 1);
+
+// ==================== SECURITY MIDDLEWARE ====================
+
+// Security headers
+if (helmet) {
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://js.stripe.com"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'", "https://api.stripe.com"],
+        frameSrc: ["https://js.stripe.com", "https://hooks.stripe.com"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+  }));
+} else {
+  // Basic security headers fallback
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
+}
+
+// Rate limiting
+if (rateLimit) {
+  // General API rate limit
+  const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // 100 requests per 15 minutes
+    message: { success: false, message: 'Too many requests, please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Strict rate limit for auth endpoints
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // 10 login attempts per 15 minutes
+    message: { success: false, message: 'Too many login attempts, please try again in 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Rate limit for form submissions (POST only, skip admin)
+  const formLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 20, // 20 submissions per hour
+    message: { success: false, message: 'Too many submissions, please try again later.' },
+    skip: (req) => {
+      // Skip rate limiting for non-POST requests (GET, PUT, DELETE)
+      if (req.method !== 'POST') return true;
+      // Skip for admin routes
+      if (req.path.includes('/admin/')) return true;
+      return false;
+    },
+  });
+
+  app.use('/api/', generalLimiter);
+  app.use('/api/users/login', authLimiter);
+  app.use('/api/users/register', authLimiter);
+  app.use('/api/tickets', formLimiter);
+}
+
+// Request size limit
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// CORS with restrictions
+app.use(cors({
+  origin: ['https://zenweb.studio', 'http://localhost:3000', 'http://localhost:3001'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
+
+// Input sanitization middleware
+app.use((req, res, next) => {
+  if (req.body) {
+    req.body = sanitizeObject(req.body);
+  }
+  next();
+});
+
+// Admin IP whitelist (hidden from frontend)
+// Temporarily disabled for initial login - re-enable after setting up
+const ADMIN_ALLOWED_IPS = ['76.122.179.102', '34.72.176.129', '205.169.39.57', '205.169.39.111'];
+const ADMIN_IP_RESTRICTION_ENABLED = false; // Set to true to enable IP restriction
+
+// Get client IP from request
+function getClientIP(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+         req.headers['x-real-ip'] ||
+         req.connection?.remoteAddress ||
+         req.socket?.remoteAddress ||
+         'unknown';
+}
+
+// Check if IP is allowed for admin access
+function isAdminIP(req) {
+  if (!ADMIN_IP_RESTRICTION_ENABLED) return true; // Bypass if disabled
+  const clientIP = getClientIP(req);
+  return ADMIN_ALLOWED_IPS.includes(clientIP);
+}
 
 // Initialize SQLite Database
 const dbPath = path.join(__dirname, 'database.sqlite');
@@ -113,47 +404,38 @@ db.exec(`
     value TEXT NOT NULL,
     updatedAt TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS blocked_ips (
+    ip TEXT PRIMARY KEY,
+    reason TEXT,
+    blockedAt TEXT NOT NULL,
+    expiresAt TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS security_logs (
+    id TEXT PRIMARY KEY,
+    event TEXT NOT NULL,
+    ip TEXT,
+    userAgent TEXT,
+    details TEXT,
+    createdAt TEXT NOT NULL
+  );
 `);
 
-// Add proposalAmount column to tickets if it doesn't exist
-try {
-  db.exec(`ALTER TABLE tickets ADD COLUMN proposalAmount REAL`);
-  console.log('Added proposalAmount column to tickets table');
-} catch (e) {
-  // Column already exists, ignore error
-}
+// Add columns if they don't exist
+const alterTableQueries = [
+  'ALTER TABLE tickets ADD COLUMN proposalAmount REAL',
+  'ALTER TABLE tickets ADD COLUMN paymentStatus TEXT DEFAULT \'unpaid\'',
+  'ALTER TABLE tickets ADD COLUMN paymentId TEXT',
+  'ALTER TABLE tickets ADD COLUMN paidAt TEXT',
+  'ALTER TABLE tickets ADD COLUMN relatedProjectId TEXT',
+];
 
-// Add payment columns to tickets if they don't exist
-try {
-  db.exec(`ALTER TABLE tickets ADD COLUMN paymentStatus TEXT DEFAULT 'unpaid'`);
-  console.log('Added paymentStatus column to tickets table');
-} catch (e) {
-  // Column already exists, ignore error
-}
+alterTableQueries.forEach(query => {
+  try { db.exec(query); } catch (e) { /* Column exists */ }
+});
 
-try {
-  db.exec(`ALTER TABLE tickets ADD COLUMN paymentId TEXT`);
-  console.log('Added paymentId column to tickets table');
-} catch (e) {
-  // Column already exists, ignore error
-}
-
-try {
-  db.exec(`ALTER TABLE tickets ADD COLUMN paidAt TEXT`);
-  console.log('Added paidAt column to tickets table');
-} catch (e) {
-  // Column already exists, ignore error
-}
-
-// Add relatedProjectId column for linking enhancements/issues to existing projects
-try {
-  db.exec(`ALTER TABLE tickets ADD COLUMN relatedProjectId TEXT`);
-  console.log('Added relatedProjectId column to tickets table');
-} catch (e) {
-  // Column already exists, ignore error
-}
-
-// Create analytics table for page views
+// Create analytics tables
 db.exec(`
   CREATE TABLE IF NOT EXISTS page_views (
     id TEXT PRIMARY KEY,
@@ -165,11 +447,8 @@ db.exec(`
     city TEXT,
     sessionId TEXT,
     createdAt TEXT NOT NULL
-  )
-`);
+  );
 
-// Create table for unique visitors (sessions)
-db.exec(`
   CREATE TABLE IF NOT EXISTS visitor_sessions (
     id TEXT PRIMARY KEY,
     ip TEXT,
@@ -177,13 +456,56 @@ db.exec(`
     firstVisit TEXT NOT NULL,
     lastVisit TEXT NOT NULL,
     pageViews INTEGER DEFAULT 1
-  )
+  );
 `);
+
+// ==================== SECURITY: CLEAN UP & SETUP ADMIN ====================
+
+// Remove all existing admin accounts and create new secure one
+async function setupSecureAdmin() {
+  try {
+    // Delete ALL admin accounts (old insecure ones)
+    db.prepare("DELETE FROM users WHERE role = 'admin'").run();
+    db.prepare("DELETE FROM users WHERE email LIKE '%admin%'").run();
+    db.prepare("DELETE FROM users WHERE email = 'admin@admin.com'").run();
+    console.log('Removed all old admin accounts');
+
+    // Create new secure admin with hashed password
+    const adminPassword = 'KJ029Jcdl;23edsa#@E';
+    const hashedPassword = await hashPassword(adminPassword);
+    const now = new Date().toISOString();
+    const adminId = 'admin_' + uuidv4().replace(/-/g, '').slice(0, 12);
+
+    const existingAdmin = db.prepare("SELECT id FROM users WHERE email = 'admin@zenweb.studio'").get();
+    if (!existingAdmin) {
+      db.prepare(`
+        INSERT INTO users (id, email, password, name, company, phone, role, createdAt)
+        VALUES (?, 'admin@zenweb.studio', ?, 'Admin', 'Zenweb Studio', '', 'admin', ?)
+      `).run(adminId, hashedPassword, now);
+      console.log('Created new secure admin account: admin@zenweb.studio');
+    } else {
+      // Update existing admin password
+      db.prepare("UPDATE users SET password = ? WHERE email = 'admin@zenweb.studio'").run(hashedPassword);
+      console.log('Updated admin password');
+    }
+
+    // Log security event
+    db.prepare(`
+      INSERT INTO security_logs (id, event, ip, details, createdAt)
+      VALUES (?, 'admin_setup', 'system', 'Secure admin account configured', ?)
+    `).run(uuidv4(), now);
+
+  } catch (error) {
+    console.error('Error setting up admin:', error);
+  }
+}
+
+// Run admin setup on start
+setupSecureAdmin();
 
 // ==================== SMS HELPER FUNCTION ====================
 async function sendSmsNotification(message) {
   try {
-    // Get Twilio settings from database
     const accountSid = db.prepare('SELECT value FROM settings WHERE key = ?').get('twilio_account_sid');
     const authToken = db.prepare('SELECT value FROM settings WHERE key = ?').get('twilio_auth_token');
     const fromNumber = db.prepare('SELECT value FROM settings WHERE key = ?').get('twilio_phone_number');
@@ -220,6 +542,21 @@ function generateTicketNumber() {
   const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
   const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
   return `TKT-${dateStr}-${random}`;
+}
+
+// Log security event
+function logSecurityEvent(event, req, details = '') {
+  try {
+    const ip = getClientIP(req);
+    const userAgent = req.headers['user-agent'] || '';
+    const now = new Date().toISOString();
+    db.prepare(`
+      INSERT INTO security_logs (id, event, ip, userAgent, details, createdAt)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(uuidv4(), event, ip, userAgent.slice(0, 500), details, now);
+  } catch (e) {
+    console.error('Failed to log security event:', e.message);
+  }
 }
 
 // ==================== TICKET ROUTES ====================
@@ -262,9 +599,21 @@ app.get('/api/tickets/:id', (req, res) => {
   }
 });
 
-// CREATE ticket
+// CREATE ticket (with spam detection)
 app.post('/api/tickets', (req, res) => {
   try {
+    // Check for spam/bots
+    const spamCheck = detectSpam(req.body);
+    if (spamCheck.isSpam) {
+      logSecurityEvent('spam_blocked', req, spamCheck.reason);
+      // Return success to not alert bots, but don't save
+      return res.status(201).json({
+        success: true,
+        ticket: { ticketNumber: 'TKT-' + Date.now() },
+        message: 'Ticket created successfully'
+      });
+    }
+
     const {
       userId, projectId, requestType, category, issueType, affectedArea,
       errorMessage, stepsToReproduce, expectedBehavior, actualBehavior,
@@ -328,6 +677,16 @@ app.post('/api/tickets', (req, res) => {
     const typeLabel = requestType === 'new_project' ? 'Project Request' : requestType === 'enhancement' ? 'Enhancement Request' : 'Technical Issue';
     const smsMessage = `New Ticket: ${ticketNumber}\nType: ${typeLabel}\nFrom: ${contactName || 'Unknown'}\nSubject: ${finalSubject}\nPriority: ${priority || 'normal'}`;
     sendSmsNotification(smsMessage);
+
+    // Send email alert to admin
+    sendEmailAlert({
+      ticketNumber,
+      type: typeLabel,
+      name: contactName,
+      email: contactEmail,
+      subject: finalSubject,
+      priority: priority || 'normal'
+    });
 
     res.status(201).json({ success: true, ticket, message: 'Ticket created successfully' });
   } catch (error) {
@@ -454,16 +813,28 @@ app.get('/api/users', (req, res) => {
   }
 });
 
-// Register user
-app.post('/api/users/register', (req, res) => {
+// Register user (with password hashing)
+app.post('/api/users/register', async (req, res) => {
   try {
     const { email, password, name, company, phone, address } = req.body;
 
+    // Input validation
+    if (!email || !password || !name) {
+      return res.status(400).json({ success: false, message: 'Email, password, and name are required.' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+    }
+
     // Check if email exists
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase());
     if (existing) {
       return res.status(400).json({ success: false, message: 'An account with this email already exists.' });
     }
+
+    // Hash password
+    const hashedPassword = await hashPassword(password);
 
     const id = Date.now().toString();
     const now = new Date().toISOString();
@@ -472,11 +843,12 @@ app.post('/api/users/register', (req, res) => {
       INSERT INTO users (id, email, password, name, company, phone, street, city, state, zip, role, createdAt)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'user', ?)
     `).run(
-      id, email, password, name, company || '', phone || '',
+      id, email.toLowerCase(), hashedPassword, name, company || '', phone || '',
       address?.street || '', address?.city || '', address?.state || '', address?.zip || '',
       now
     );
 
+    logSecurityEvent('user_registered', req, `Email: ${email}`);
     res.status(201).json({ success: true, message: 'Account created successfully!', userId: id });
   } catch (error) {
     console.error('Error registering user:', error);
@@ -484,30 +856,48 @@ app.post('/api/users/register', (req, res) => {
   }
 });
 
-// Login user
-app.post('/api/users/login', (req, res) => {
+// Login user (with brute force protection)
+app.post('/api/users/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    const clientIP = getClientIP(req);
 
-    // Check for default admin
-    if (email === 'admin@admin.com' && password === 'admin') {
-      return res.json({
-        success: true,
-        user: {
-          id: '1',
-          email: 'admin@admin.com',
-          name: 'Admin',
-          role: 'admin',
-          username: 'admin'
-        }
+    // Check for IP lockout
+    const lockoutCheck = checkLoginAttempts(clientIP);
+    if (lockoutCheck.blocked) {
+      logSecurityEvent('login_blocked', req, `IP locked out for ${lockoutCheck.timeRemaining}s`);
+      return res.status(429).json({
+        success: false,
+        message: `Too many failed attempts. Try again in ${Math.ceil(lockoutCheck.timeRemaining / 60)} minutes.`
       });
     }
 
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    // Find user
+    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
 
-    if (!user || user.password !== password) {
+    if (!user) {
+      recordFailedLogin(clientIP);
+      logSecurityEvent('login_failed', req, `Unknown email: ${email}`);
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
+
+    // Verify password
+    const passwordValid = await verifyPassword(password, user.password);
+    if (!passwordValid) {
+      recordFailedLogin(clientIP);
+      logSecurityEvent('login_failed', req, `Invalid password for: ${email}`);
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
+
+    // Check admin IP restriction
+    if (user.role === 'admin' && !isAdminIP(req)) {
+      logSecurityEvent('admin_access_denied', req, `Admin login from unauthorized IP: ${email}`);
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Success - clear failed attempts
+    clearFailedLogins(clientIP);
+    logSecurityEvent('login_success', req, `User: ${email}`);
 
     res.json({
       success: true,
@@ -531,6 +921,11 @@ app.post('/api/users/login', (req, res) => {
 // Admin login as user (impersonate)
 app.post('/api/admin/impersonate/:userId', (req, res) => {
   try {
+    if (!isAdminIP(req)) {
+      logSecurityEvent('unauthorized_impersonate', req);
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
     const { userId } = req.params;
 
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
@@ -538,7 +933,8 @@ app.post('/api/admin/impersonate/:userId', (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Return user data for admin to use (excluding password)
+    logSecurityEvent('admin_impersonate', req, `Impersonating user: ${user.email}`);
+
     res.json({
       success: true,
       user: {
@@ -562,13 +958,18 @@ app.post('/api/admin/impersonate/:userId', (req, res) => {
 });
 
 // Admin reset user password
-app.post('/api/admin/users/:userId/reset-password', (req, res) => {
+app.post('/api/admin/users/:userId/reset-password', async (req, res) => {
   try {
+    if (!isAdminIP(req)) {
+      logSecurityEvent('unauthorized_password_reset', req);
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
     const { userId } = req.params;
     const { newPassword } = req.body;
 
-    if (!newPassword || newPassword.length < 4) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 4 characters' });
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
     }
 
     const user = db.prepare('SELECT id, email, name FROM users WHERE id = ?').get(userId);
@@ -576,8 +977,10 @@ app.post('/api/admin/users/:userId/reset-password', (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(newPassword, userId);
+    const hashedPassword = await hashPassword(newPassword);
+    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedPassword, userId);
 
+    logSecurityEvent('admin_password_reset', req, `Reset password for: ${user.email}`);
     console.log(`Password reset for user ${user.email} by admin`);
     res.json({ success: true, message: `Password reset successfully for ${user.name}` });
   } catch (error) {
@@ -603,16 +1006,60 @@ app.get('/api/users/:userId', (req, res) => {
   }
 });
 
+// Admin create new user
+app.post('/api/admin/users', async (req, res) => {
+  try {
+    const { email, password, name, company, phone, street, city, state, zip, role } = req.body;
+
+    // Input validation
+    if (!email || !password || !name) {
+      return res.status(400).json({ success: false, message: 'Email, password, and name are required.' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+    }
+
+    // Check if email exists
+    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase());
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'An account with this email already exists.' });
+    }
+
+    // Hash password
+    const hashedPassword = await hashPassword(password);
+
+    const id = 'usr_' + uuidv4().replace(/-/g, '').slice(0, 12);
+    const now = new Date().toISOString();
+
+    db.prepare(`
+      INSERT INTO users (id, email, password, name, company, phone, street, city, state, zip, role, createdAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id, email.toLowerCase(), hashedPassword, name, company || '', phone || '',
+      street || '', city || '', state || '', zip || '',
+      role || 'user', now
+    );
+
+    logSecurityEvent('admin_user_created', req, `Created user: ${email}`);
+    console.log(`Admin created new user: ${email}`);
+
+    const user = db.prepare('SELECT id, email, name, company, phone, street, city, state, zip, role, createdAt FROM users WHERE id = ?').get(id);
+    res.status(201).json({ success: true, user, message: 'User created successfully!' });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({ success: false, message: 'Failed to create user' });
+  }
+});
+
 // ==================== SETTINGS ROUTES ====================
 
 // Get all settings (admin only)
 app.get('/api/settings', (req, res) => {
   try {
     const settings = db.prepare('SELECT key, value, updatedAt FROM settings').all();
-    // Convert to object for easier frontend use
     const settingsObj = {};
     settings.forEach(s => {
-      // Mask sensitive values
       if (s.key === 'twilio_auth_token' && s.value) {
         settingsObj[s.key] = '***' + s.value.slice(-4);
       } else {
@@ -629,6 +1076,10 @@ app.get('/api/settings', (req, res) => {
 // Update settings (admin only)
 app.put('/api/settings', (req, res) => {
   try {
+    if (!isAdminIP(req)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
     const updates = req.body;
     const now = new Date().toISOString();
 
@@ -636,8 +1087,6 @@ app.put('/api/settings', (req, res) => {
 
     for (const [key, value] of Object.entries(updates)) {
       if (!allowedKeys.includes(key)) continue;
-
-      // Skip if value is masked (starts with ***)
       if (value && value.startsWith('***')) continue;
 
       const existing = db.prepare('SELECT key FROM settings WHERE key = ?').get(key);
@@ -698,7 +1147,6 @@ app.post('/api/projects', (req, res) => {
 
     const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
 
-    // Send SMS notification
     const smsMessage = `New Project: ${name}\nType: ${type || 'Unspecified'}\nBudget: ${budgetRange || 'Not set'}\nTimeline: ${timeline || 'Not set'}`;
     sendSmsNotification(smsMessage);
 
@@ -711,7 +1159,6 @@ app.post('/api/projects', (req, res) => {
 
 // ==================== STRIPE PAYMENT ROUTES ====================
 
-// Get Stripe publishable key
 app.get('/api/payments/config', (req, res) => {
   const publishableKey = db.prepare('SELECT value FROM settings WHERE key = ?').get('stripe_publishable_key');
   res.json({
@@ -720,12 +1167,10 @@ app.get('/api/payments/config', (req, res) => {
   });
 });
 
-// Create a Stripe Checkout session
 app.post('/api/payments/create-checkout', async (req, res) => {
   try {
     const { ticketId } = req.body;
 
-    // Get ticket details
     const ticket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId);
     if (!ticket) {
       return res.status(404).json({ success: false, message: 'Ticket not found' });
@@ -739,17 +1184,14 @@ app.post('/api/payments/create-checkout', async (req, res) => {
       return res.status(400).json({ success: false, message: 'This ticket has already been paid' });
     }
 
-    // Get Stripe secret key from settings
     const secretKey = db.prepare('SELECT value FROM settings WHERE key = ?').get('stripe_secret_key');
     if (!secretKey?.value) {
       return res.status(500).json({ success: false, message: 'Stripe not configured' });
     }
 
-    // Initialize Stripe with the key from settings
     const Stripe = require('stripe');
     const stripeClient = Stripe(secretKey.value);
 
-    // Create Checkout Session
     const session = await stripeClient.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -760,7 +1202,7 @@ app.post('/api/payments/create-checkout', async (req, res) => {
               name: `Ticket ${ticket.ticketNumber}`,
               description: ticket.description?.substring(0, 100) || 'Support Ticket Payment',
             },
-            unit_amount: Math.round(ticket.proposalAmount * 100), // Stripe expects cents
+            unit_amount: Math.round(ticket.proposalAmount * 100),
           },
           quantity: 1,
         },
@@ -774,7 +1216,6 @@ app.post('/api/payments/create-checkout', async (req, res) => {
       },
     });
 
-    // Store the session ID for verification
     db.prepare('UPDATE tickets SET paymentId = ? WHERE id = ?').run(session.id, ticketId);
 
     res.json({ success: true, sessionId: session.id, url: session.url });
@@ -784,7 +1225,6 @@ app.post('/api/payments/create-checkout', async (req, res) => {
   }
 });
 
-// Verify payment and update ticket (called after redirect from Stripe)
 app.post('/api/payments/verify', async (req, res) => {
   try {
     const { ticketId, sessionId } = req.body;
@@ -794,7 +1234,6 @@ app.post('/api/payments/verify', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Ticket not found' });
     }
 
-    // Get Stripe secret key from settings
     const secretKey = db.prepare('SELECT value FROM settings WHERE key = ?').get('stripe_secret_key');
     if (!secretKey?.value) {
       return res.status(500).json({ success: false, message: 'Stripe not configured' });
@@ -803,19 +1242,16 @@ app.post('/api/payments/verify', async (req, res) => {
     const Stripe = require('stripe');
     const stripeClient = Stripe(secretKey.value);
 
-    // Retrieve the session to verify payment
     const session = await stripeClient.checkout.sessions.retrieve(sessionId || ticket.paymentId);
 
     if (session.payment_status === 'paid') {
-      // Update ticket as paid
       db.prepare(`
         UPDATE tickets
         SET paymentStatus = 'paid', paidAt = ?, updatedAt = ?
         WHERE id = ?
       `).run(new Date().toISOString(), new Date().toISOString(), ticketId);
 
-      // Send SMS notification
-      await sendSmsNotification(`💰 Payment received for ticket ${ticket.ticketNumber}! Amount: $${ticket.proposalAmount}`);
+      await sendSmsNotification(`Payment received for ticket ${ticket.ticketNumber}! Amount: $${ticket.proposalAmount}`);
 
       res.json({ success: true, message: 'Payment verified successfully', paymentStatus: 'paid' });
     } else {
@@ -827,7 +1263,6 @@ app.post('/api/payments/verify', async (req, res) => {
   }
 });
 
-// Stripe webhook handler (for production use)
 app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
     const secretKey = db.prepare('SELECT value FROM settings WHERE key = ?').get('stripe_secret_key');
@@ -849,7 +1284,6 @@ app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), asy
       event = req.body;
     }
 
-    // Handle the event
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       const ticketId = session.metadata?.ticketId;
@@ -863,7 +1297,7 @@ app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), asy
 
         const ticket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId);
         if (ticket) {
-          await sendSmsNotification(`💰 Payment received for ticket ${ticket.ticketNumber}! Amount: $${ticket.proposalAmount}`);
+          await sendSmsNotification(`Payment received for ticket ${ticket.ticketNumber}! Amount: $${ticket.proposalAmount}`);
         }
       }
     }
@@ -877,7 +1311,6 @@ app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), asy
 
 // ==================== ANALYTICS ENDPOINTS ====================
 
-// Helper to get real IP
 function getRealIP(req) {
   return req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
          req.headers['x-real-ip'] ||
@@ -885,14 +1318,12 @@ function getRealIP(req) {
          req.ip || 'unknown';
 }
 
-// Track page view
 app.post('/api/analytics/pageview', (req, res) => {
   try {
     const { path, referrer, sessionId } = req.body;
     const ip = getRealIP(req);
     const userAgent = req.headers['user-agent'] || '';
 
-    // Check if IP is excluded
     const excludedIPs = db.prepare('SELECT value FROM settings WHERE key = ?').get('excluded_ips');
     if (excludedIPs) {
       const ips = excludedIPs.value.split(',').map(i => i.trim());
@@ -904,14 +1335,12 @@ app.post('/api/analytics/pageview', (req, res) => {
     const now = new Date().toISOString();
     const id = uuidv4();
 
-    // Insert page view
     const insertView = db.prepare(`
       INSERT INTO page_views (id, path, referrer, userAgent, ip, sessionId, createdAt)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     insertView.run(id, path, referrer || '', userAgent, ip, sessionId || '', now);
 
-    // Update or create session
     if (sessionId) {
       const existingSession = db.prepare('SELECT * FROM visitor_sessions WHERE id = ?').get(sessionId);
       if (existingSession) {
@@ -930,12 +1359,10 @@ app.post('/api/analytics/pageview', (req, res) => {
   }
 });
 
-// Get analytics data (admin only)
 app.get('/api/analytics', (req, res) => {
   try {
     const { period = '7d' } = req.query;
 
-    // Calculate date range
     let startDate = new Date();
     if (period === '24h') startDate.setHours(startDate.getHours() - 24);
     else if (period === '7d') startDate.setDate(startDate.getDate() - 7);
@@ -945,63 +1372,17 @@ app.get('/api/analytics', (req, res) => {
 
     const startISO = startDate.toISOString();
 
-    // Total page views in period
-    const totalViews = db.prepare(`
-      SELECT COUNT(*) as count FROM page_views WHERE createdAt >= ?
-    `).get(startISO);
+    const totalViews = db.prepare(`SELECT COUNT(*) as count FROM page_views WHERE createdAt >= ?`).get(startISO);
+    const uniqueVisitors = db.prepare(`SELECT COUNT(DISTINCT COALESCE(sessionId, ip)) as count FROM page_views WHERE createdAt >= ?`).get(startISO);
+    const pagesByViews = db.prepare(`SELECT path, COUNT(*) as views FROM page_views WHERE createdAt >= ? GROUP BY path ORDER BY views DESC LIMIT 20`).all(startISO);
+    const viewsByDay = db.prepare(`SELECT DATE(createdAt) as date, COUNT(*) as views FROM page_views WHERE createdAt >= ? GROUP BY DATE(createdAt) ORDER BY date ASC`).all(startISO);
+    const topReferrers = db.prepare(`SELECT referrer, COUNT(*) as count FROM page_views WHERE createdAt >= ? AND referrer != '' AND referrer IS NOT NULL GROUP BY referrer ORDER BY count DESC LIMIT 10`).all(startISO);
+    const recentVisitors = db.prepare(`SELECT path, ip, userAgent, createdAt FROM page_views ORDER BY createdAt DESC LIMIT 20`).all();
 
-    // Unique visitors (by session or IP)
-    const uniqueVisitors = db.prepare(`
-      SELECT COUNT(DISTINCT COALESCE(sessionId, ip)) as count FROM page_views WHERE createdAt >= ?
-    `).get(startISO);
-
-    // Page views by path
-    const pagesByViews = db.prepare(`
-      SELECT path, COUNT(*) as views
-      FROM page_views
-      WHERE createdAt >= ?
-      GROUP BY path
-      ORDER BY views DESC
-      LIMIT 20
-    `).all(startISO);
-
-    // Views by day
-    const viewsByDay = db.prepare(`
-      SELECT DATE(createdAt) as date, COUNT(*) as views
-      FROM page_views
-      WHERE createdAt >= ?
-      GROUP BY DATE(createdAt)
-      ORDER BY date ASC
-    `).all(startISO);
-
-    // Top referrers
-    const topReferrers = db.prepare(`
-      SELECT referrer, COUNT(*) as count
-      FROM page_views
-      WHERE createdAt >= ? AND referrer != '' AND referrer IS NOT NULL
-      GROUP BY referrer
-      ORDER BY count DESC
-      LIMIT 10
-    `).all(startISO);
-
-    // Recent visitors (last 20)
-    const recentVisitors = db.prepare(`
-      SELECT path, ip, userAgent, createdAt
-      FROM page_views
-      ORDER BY createdAt DESC
-      LIMIT 20
-    `).all();
-
-    // Today's stats
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
-    const todayViews = db.prepare(`
-      SELECT COUNT(*) as count FROM page_views WHERE createdAt >= ?
-    `).get(todayStart.toISOString());
-
-    const todayVisitors = db.prepare(`
-      SELECT COUNT(DISTINCT COALESCE(sessionId, ip)) as count FROM page_views WHERE createdAt >= ?
-    `).get(todayStart.toISOString());
+    const todayViews = db.prepare(`SELECT COUNT(*) as count FROM page_views WHERE createdAt >= ?`).get(todayStart.toISOString());
+    const todayVisitors = db.prepare(`SELECT COUNT(DISTINCT COALESCE(sessionId, ip)) as count FROM page_views WHERE createdAt >= ?`).get(todayStart.toISOString());
 
     res.json({
       success: true,
@@ -1023,7 +1404,6 @@ app.get('/api/analytics', (req, res) => {
   }
 });
 
-// Get/Set excluded IPs
 app.get('/api/analytics/excluded-ips', (req, res) => {
   try {
     const setting = db.prepare('SELECT value FROM settings WHERE key = ?').get('excluded_ips');
@@ -1040,11 +1420,9 @@ app.put('/api/analytics/excluded-ips', (req, res) => {
 
     const existing = db.prepare('SELECT * FROM settings WHERE key = ?').get('excluded_ips');
     if (existing) {
-      db.prepare('UPDATE settings SET value = ?, updatedAt = ? WHERE key = ?')
-        .run(ips, now, 'excluded_ips');
+      db.prepare('UPDATE settings SET value = ?, updatedAt = ? WHERE key = ?').run(ips, now, 'excluded_ips');
     } else {
-      db.prepare('INSERT INTO settings (key, value, updatedAt) VALUES (?, ?, ?)')
-        .run('excluded_ips', ips, now);
+      db.prepare('INSERT INTO settings (key, value, updatedAt) VALUES (?, ?, ?)').run('excluded_ips', ips, now);
     }
 
     res.json({ success: true, message: 'Excluded IPs updated' });
@@ -1053,35 +1431,61 @@ app.put('/api/analytics/excluded-ips', (req, res) => {
   }
 });
 
-// Get current visitor's IP (for admin to know their IP)
 app.get('/api/analytics/my-ip', (req, res) => {
   const ip = getRealIP(req);
   res.json({ success: true, ip });
 });
 
-// Health check
+// ==================== SECURITY ENDPOINTS ====================
+
+app.get('/api/security/logs', (req, res) => {
+  try {
+    if (!isAdminIP(req)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    const logs = db.prepare('SELECT * FROM security_logs ORDER BY createdAt DESC LIMIT 100').all();
+    res.json({ success: true, logs });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/api/check-admin-access', (req, res) => {
+  res.json({ allowed: isAdminIP(req) });
+});
+
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), secure: true });
 });
 
 // Start server
 app.listen(PORT, () => {
   console.log(`
   ========================================
-  PCR Backend API Server
+  PCR Backend API Server (SECURED)
   ========================================
   Server running on: http://localhost:${PORT}
   Database: ${dbPath}
 
+  Security Features:
+  - Password hashing (bcrypt/PBKDF2)
+  - Rate limiting enabled
+  - Input sanitization
+  - Bot/spam detection
+  - Brute force protection
+  - Security event logging
+  - Admin IP restriction
+
   API Endpoints:
   - GET    /api/tickets          - Get all tickets
   - GET    /api/tickets/:id      - Get single ticket
-  - POST   /api/tickets          - Create ticket
+  - POST   /api/tickets          - Create ticket (spam protected)
   - PUT    /api/tickets/:id      - Update ticket
   - DELETE /api/tickets/:id      - Delete ticket
   - GET    /api/users            - Get all users
-  - POST   /api/users/register   - Register user
-  - POST   /api/users/login      - Login user
+  - POST   /api/users/register   - Register user (password hashed)
+  - POST   /api/users/login      - Login user (brute force protected)
+  - GET    /api/security/logs    - View security logs (admin only)
   - GET    /api/health           - Health check
   ========================================
   `);

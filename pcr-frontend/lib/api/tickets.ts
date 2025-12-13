@@ -41,6 +41,7 @@ export interface Ticket {
   paymentStatus?: 'unpaid' | 'paid' | 'pending';
   paymentId?: string;
   paidAt?: string;
+  cost?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -49,6 +50,7 @@ export interface CreateTicketInput {
   userId?: string | null;
   projectId?: string | null;
   requestType: 'new_project' | 'technical_issue' | 'enhancement';
+  subject?: string;
   issueType?: string;
   relatedProjectId?: string | null;
   affectedArea?: string;

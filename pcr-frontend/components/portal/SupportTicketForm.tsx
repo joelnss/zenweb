@@ -1516,7 +1516,11 @@ export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps 
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={isSubmitting || !formData.requestType || (formData.requestType === 'enhancement' && !formData.relatedProjectId)}
+          disabled={isSubmitting || !formData.requestType ||
+            (formData.requestType === 'technical_issue' && (!formData.issueType || !formData.affectedArea || !formData.stepsToReproduce)) ||
+            (formData.requestType === 'enhancement' && !formData.stepsToReproduce) ||
+            (formData.requestType === 'new_project' && (!formData.projectType || !formData.stepsToReproduce))
+          }
           className={`w-full px-6 py-4 font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
             theme === 'dark'
               ? 'bg-white text-gray-900 hover:bg-gray-100'

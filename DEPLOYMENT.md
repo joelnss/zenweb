@@ -12,7 +12,7 @@
 ## Server Information
 
 - **EC2 Instance**: `i-010b5267d932f733c`
-- **Public IP**: `3.142.156.127`
+- **Public IP**: `3.148.178.164`
 - **Region**: us-east-2
 - **Instance Type**: t2.micro
 - **Domain**: https://zenweb.studio
@@ -20,7 +20,7 @@
 ## SSH Access
 
 ```bash
-ssh -i ~/Documents/buypcr/sshrsa.pem ec2-user@3.142.156.127
+ssh -i ~/Documents/buypcr/sshrsa.pem ec2-user@3.148.178.164
 ```
 
 ## Local Development
@@ -67,10 +67,10 @@ npm run build
 scp -i ~/Documents/buypcr/sshrsa.pem -r \
   ~/Documents/buypcr/pcr-frontend/.next \
   ~/Documents/buypcr/pcr-frontend/components \
-  ec2-user@3.142.156.127:~/zenith/
+  ec2-user@3.148.178.164:~/zenith/
 
 # 3. Restart service
-ssh -i ~/Documents/buypcr/sshrsa.pem ec2-user@3.142.156.127 \
+ssh -i ~/Documents/buypcr/sshrsa.pem ec2-user@3.148.178.164 \
   "source ~/.nvm/nvm.sh && pm2 restart zenith"
 ```
 
@@ -89,10 +89,10 @@ tar --exclude='node_modules' --exclude='.next/cache' --exclude='.git' \
 
 # 3. Upload tarball
 scp -i ~/Documents/buypcr/sshrsa.pem pcr-deploy.tar.gz \
-  ec2-user@3.142.156.127:~/
+  ec2-user@3.148.178.164:~/
 
 # 4. Extract and install on server
-ssh -i ~/Documents/buypcr/sshrsa.pem ec2-user@3.142.156.127 << 'EOF'
+ssh -i ~/Documents/buypcr/sshrsa.pem ec2-user@3.148.178.164 << 'EOF'
   source ~/.nvm/nvm.sh
   tar -xzvf pcr-deploy.tar.gz
   cd pcr-backend && npm install
@@ -111,7 +111,7 @@ EOF
 
 ```bash
 # SSH into server first
-ssh -i ~/Documents/buypcr/sshrsa.pem ec2-user@3.142.156.127
+ssh -i ~/Documents/buypcr/sshrsa.pem ec2-user@3.148.178.164
 
 # View running processes
 pm2 list
