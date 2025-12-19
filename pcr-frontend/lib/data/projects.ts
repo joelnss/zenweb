@@ -7,6 +7,7 @@ export const PROJECT_TYPES = [
   { value: 'platform_migration', label: 'Platform Migration' },
   { value: 'oci_punchout', label: 'OCI Punch-Out' },
   { value: 'payment_integration', label: 'Payment Gateway Integration' },
+  { value: 'pos_integration', label: 'POS Integration' },
   { value: 'erp_integration', label: 'ERP Integration' },
   { value: 'b2b_portal', label: 'B2B Customer Portal' },
   { value: 'inventory_management', label: 'Inventory Management' },

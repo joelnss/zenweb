@@ -11,6 +11,7 @@ function StartProjectContent() {
   const { theme } = useTheme();
   const searchParams = useSearchParams();
   const preSelectedService = searchParams.get('service');
+  const preSelectedType = searchParams.get('type');
 
   return (
     <div className={`min-h-screen relative overflow-hidden ${theme === 'dark' ? 'bg-gray-950' : 'bg-white'}`}>
@@ -70,7 +71,7 @@ function StartProjectContent() {
       <section className="pb-20 relative z-10">
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto">
-            <TicketForm preSelectedService={preSelectedService} />
+            <TicketForm preSelectedService={preSelectedService} preSelectedType={preSelectedType} />
           </div>
 
           {/* Info Section */}

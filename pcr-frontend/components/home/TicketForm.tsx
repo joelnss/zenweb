@@ -36,6 +36,7 @@ const serviceCategories = [
   { value: 'backend', label: 'Backend Infrastructure Optimization' },
   { value: 'frontend', label: 'Frontend Development & UI Integration' },
   { value: 'payment', label: 'Secure Payment Gateway Integration' },
+  { value: 'pos_integration', label: 'POS Integration' },
   { value: 'database', label: 'Database Architecture & Design' },
   { value: 'hosting', label: 'Cloud Hosting & Scalability' },
   { value: 'cross-platform', label: 'Cross-platform App Development' },
@@ -102,9 +103,10 @@ interface TicketFormData {
 
 interface TicketFormProps {
   preSelectedService?: string | null;
+  preSelectedType?: string | null;
 }
 
-export default function TicketForm({ preSelectedService }: TicketFormProps = {}) {
+export default function TicketForm({ preSelectedService, preSelectedType }: TicketFormProps = {}) {
   const { theme } = useTheme();
   const { user, isAuthenticated, login } = useAuth();
   const router = useRouter();
@@ -124,7 +126,7 @@ export default function TicketForm({ preSelectedService }: TicketFormProps = {})
     company: '',
     website: '',
     platform: '',
-    serviceCategory: preSelectedService || '',
+    serviceCategory: preSelectedType || preSelectedService || '',
     hostingNeeds: '',
     budget: '',
     timeline: '',

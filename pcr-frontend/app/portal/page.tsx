@@ -4,9 +4,13 @@ import { motion } from 'framer-motion';
 import SupportTicketForm from '@/components/portal/SupportTicketForm';
 import Link from 'next/link';
 import { useTheme } from '@/lib/theme/theme-context';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function CustomerPortal() {
+function PortalContent() {
   const { theme } = useTheme();
+  const searchParams = useSearchParams();
+  const prefilledIssue = searchParams.get('issue');
 
   return (
     <div className={`min-h-screen relative overflow-hidden ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50'}`}>
@@ -61,7 +65,7 @@ export default function CustomerPortal() {
       <section className="pb-20 relative z-10">
         <div className="container mx-auto px-6">
           <div className="max-w-3xl mx-auto">
-            <SupportTicketForm />
+            <SupportTicketForm prefilledIssue={prefilledIssue} />
           </div>
 
           {/* Help Section */}
@@ -124,5 +128,13 @@ export default function CustomerPortal() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function CustomerPortal() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-950" />}>
+      <PortalContent />
+    </Suspense>
   );
 }

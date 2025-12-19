@@ -11,7 +11,7 @@ import { createTicket, getAllTickets } from '@/lib/api/tickets';
 const issueTypes = [
   { value: 'bug', label: 'Bug / Error' },
   { value: 'performance', label: 'Performance Issue' },
-  { value: 'security', label: 'Security Concern' },
+  { value: 'security-audit', label: 'Security Audit' },
   { value: 'downtime', label: 'Site Down / Unreachable' },
   { value: 'content', label: 'Content Update Request' },
   { value: 'feature', label: 'Feature Request' },
@@ -79,9 +79,10 @@ interface UserProject {
 
 interface SupportTicketFormProps {
   onSuccess?: () => void;
+  prefilledIssue?: string | null;
 }
 
-export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps = {}) {
+export default function SupportTicketForm({ onSuccess, prefilledIssue }: SupportTicketFormProps = {}) {
   const { theme } = useTheme();
   const { user, isAuthenticated, login } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -137,6 +138,22 @@ export default function SupportTicketForm({ onSuccess }: SupportTicketFormProps 
       setCustomerType('returning');
     }
   }, [user]);
+
+  // Handle prefilled issue from URL params
+  useEffect(() => {
+    if (prefilledIssue) {
+      // Set request type to technical_issue and prefill the issue type
+      setFormData(prev => ({
+        ...prev,
+        requestType: 'technical_issue',
+        issueType: prefilledIssue,
+      }));
+      // Skip customer type selection for prefilled issues (go straight to form)
+      if (!isAuthenticated) {
+        setCustomerType('new');
+      }
+    }
+  }, [prefilledIssue, isAuthenticated]);
 
   // Fetch user's projects when authenticated
   useEffect(() => {
